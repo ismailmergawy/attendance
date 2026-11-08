@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<title>Luxury VMS — الحضور</title>
+<meta name="theme-color" content="#9A7330">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#F3F4F7;--surface:#fff;--fg:#151A23;--muted:#5E6675;--line:#DDE1E8;--accent:#9A7330;--in:#1E7A4F;--out:#37475E;--warn:#B4541A;
+--display:"Readex Pro","IBM Plex Sans Arabic",Tahoma,sans-serif;--body:"IBM Plex Sans Arabic",Tahoma,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1218;--surface:#181D26;--fg:#E9ECF1;--muted:#99A1AF;--line:#2A313D;--accent:#C9A15A;--in:#2F9E69;--out:#5A6F8F;--warn:#E08A50;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6;padding:20px 16px 40px}
+.wrap{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--display);font-size:19px;margin:0}
+h2{font-family:var(--display);font-size:15px;margin:0 0 8px}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.who{color:var(--accent);font-weight:600}
+.clock{font-family:var(--display);font-size:42px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.muted{color:var(--muted);font-size:13px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+textarea{min-height:70px;resize:vertical}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+button{font:inherit;cursor:pointer}
+.act{width:100%;border:0;border-radius:14px;padding:22px 16px;font-family:var(--display);font-size:22px;font-weight:700;color:#fff}
+.act.in{background:var(--in)}.act.out{background:var(--out)}
+.act:disabled,.btn:disabled{opacity:.5;cursor:default}
+.btn{border:0;border-radius:10px;padding:12px 16px;background:var(--accent);color:#fff;font-weight:600;width:100%;margin-top:12px}
+.link{background:none;border:0;color:var(--accent);padding:0;font-weight:600}
+.msg{min-height:22px;font-size:14px;text-align:center}
+.msg.err{color:var(--warn)}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{font-family:var(--display);font-size:19px;font-variant-numeric:tabular-nums}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+li:last-child{border-bottom:0}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:0 10px;border:1px solid currentColor;white-space:nowrap}
+.Pending{color:var(--accent)}.Approved{color:var(--in)}.Rejected{color:var(--warn)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- PIN screen -->
+  <section id="login" hidden>
+    <h1>حضور وانصراف Luxury VMS</h1>
+    <div class="card" style="margin-top:14px">
+      <label for="pin">اكتب الكود بتاعك (4 أرقام)</label>
+      <input id="pin" inputmode="numeric" maxlength="6" autocomplete="off">
+      <button class="btn" id="loginBtn">دخول</button>
+      <div class="msg err" id="loginMsg"></div>
+    </div>
+  </section>
+
+  <!-- Main -->
+  <section id="main" hidden style="display:flex;flex-direction:column;gap:16px">
+    <div class="top"><h1>حضور وانصراف</h1><span class="who" id="who"></span></div>
+    <div><div class="clock" id="clock">--:--</div><div class="muted" id="date"></div></div>
+
+    <button class="act in" id="act">Check-in</button>
+    <div class="msg" id="msg"></div>
+
+    <div class="card">
+      <h2>النهارده</h2>
+      <div class="stats">
+        <div class="stat"><span>Check-in</span><b id="sIn">—</b></div>
+        <div class="stat"><span>Check-out</span><b id="sOut">—</b></div>
+        <div class="stat"><span>ساعات الشغل</span><b id="sHrs">—</b></div>
+        <div class="stat"><span>الحالة</span><b id="sSt">—</b></div>
+      </div>
+      <p class="muted" id="rule" style="margin:10px 0 0"></p>
+    </div>
+
+    <div class="card">
+      <h2>رصيد الأجازات</h2>
+      <div class="stats">
+        <div class="stat"><span>Annual (اعتيادي)</span><b id="bA">—</b></div>
+        <div class="stat"><span>Casual (عارضة)</span><b id="bC">—</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>طلب جديد</h2>
+      <label for="rType">نوع الطلب</label>
+      <select id="rType">
+        <option value="Annual">أجازة Annual (اعتيادي)</option>
+        <option value="Casual">أجازة Casual (عارضة)</option>
+        <option value="Sick">أجازة Sick (مرضي)</option>
+        <option value="EarlyLeave">أمشي بدري</option>
+      </select>
+      <div class="row2">
+        <div><label for="rFrom" id="fromLbl">من</label><input type="date" id="rFrom"></div>
+        <div id="toBox"><label for="rTo">لحد</label><input type="date" id="rTo"></div>
+        <div id="timeBox" hidden><label for="rTime">الساعة</label><input type="time" id="rTime"></div>
+      </div>
+      <label for="rReason">السبب</label>
+      <textarea id="rReason"></textarea>
+      <div id="fileBox" hidden><label for="rFile">صورة الشهادة الطبية</label><input type="file" id="rFile" accept="image/*,application/pdf"></div>
+      <button class="btn" id="rSend">ابعت الطلب</button>
+      <div class="msg" id="rMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>طلباتي</h2>
+      <ul id="reqs"><li class="muted">مفيش طلبات لسه.</li></ul>
+    </div>
+
+    <button class="link" id="logout">مش إنت؟ خروج</button>
+  </section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const LBL = {Annual:'Annual',Casual:'Casual',Sick:'Sick',EarlyLeave:'يمشي بدري'};
+const ST = {Pending:'مستني',Approved:'اتوافق',Rejected:'اترفض'};
+let PIN = null, busy = false;
+const API = 'https://script.google.com/macros/s/AKfycbyDWEWwOxTNfRb5opdWhLbDNS3Ts7_noBkWLvKJizIyixA7dbG-3bQrvnOLku5VVT4e/exec';
+async function call(fn, ...args){
+  let r;
+  try { r = await fetch(API, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({fn, args})}); }
+  catch(e){ throw new Error('مفيش اتصال بالإنترنت، جرب تاني'); }
+  const j = await r.json(); if (!j.ok) throw new Error(j.error); return j.data;
+}
+function getPin(){ try { return localStorage.getItem('lvms_pin'); } catch(e){ return null; } }
+function savePin(p){ try { p ? localStorage.setItem('lvms_pin', p) : localStorage.removeItem('lvms_pin'); } catch(e){} }
+function show(id){ $('login').hidden = id !== 'login'; $('main').hidden = id !== 'main'; }
+function clean(m){ return String(m||'').replace(/^Error:\s*/, '').replace(/^Exception:\s*/, ''); }
+
+function tick(){ const n = new Date();
+  $('clock').textContent = n.toLocaleTimeString('ar-EG-u-nu-latn',{hour:'numeric',minute:'2-digit'});
+  $('date').textContent = n.toLocaleDateString('ar-EG-u-nu-latn',{weekday:'long',day:'numeric',month:'long'}); }
+tick(); setInterval(tick, 15000);
+
+function hm(h){ const m = Math.round(h*60); return Math.floor(m/60)+':'+String(m%60).padStart(2,'0'); }
+
+async function load(){
+  try {
+    const s = await call('empState', PIN);
+    show('main');
+    $('who').textContent = s.name;
+    const b = $('act'); b.className = 'act ' + s.next; b.textContent = s.next === 'in' ? 'Check-in' : 'Check-out'; b.disabled = false;
+    $('sIn').textContent = s.today.firstIn || '—';
+    $('sOut').textContent = s.today.lastOut || '—';
+    $('sHrs').textContent = s.records.length ? hm(s.today.hours) : '—';
+    $('sSt').textContent = s.today.status || (s.today.isOff ? 'أجازة' : '—');
+    $('rule').textContent = 'الحضور من 10 لحد ' + s.latest + '، وبعد كده بيتخصم نص يوم.';
+    $('bA').textContent = s.balances.annualLeft + ' من ' + s.balances.annualTotal;
+    $('bC').textContent = s.balances.casualLeft + ' من ' + s.balances.casualTotal;
+    const ul = $('reqs'); ul.textContent = '';
+    if (!s.requests.length) ul.innerHTML = '<li class="muted">مفيش طلبات لسه.</li>';
+    s.requests.forEach(r => { const li = document.createElement('li');
+      const a = document.createElement('span'); a.textContent = (LBL[r.type]||r.type) + ' · ' + r.from + (r.to && r.to !== r.from ? ' ← ' + r.to : '') + (r.time ? ' ' + r.time : '');
+      const p = document.createElement('span'); p.className = 'pill ' + r.status; p.textContent = ST[r.status] || r.status;
+      li.append(a, p); ul.append(li); });
+  } catch(e) {
+    savePin(null); PIN = null; show('login'); $('loginMsg').textContent = clean(e.message);
+  }
+}
+
+$('loginBtn').onclick = async () => {
+  const p = $('pin').value.trim(); if (!p) return;
+  $('loginBtn').disabled = true; $('loginMsg').textContent = '';
+  PIN = p; savePin(p); await load(); $('loginBtn').disabled = false;
+};
+$('logout').onclick = () => { savePin(null); PIN = null; $('pin').value = ''; show('login'); };
+
+function getLoc(){
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res({lat:p.coords.latitude.toFixed(6), lng:p.coords.longitude.toFixed(6), acc:p.coords.accuracy}),
+      () => res(null), {enableHighAccuracy:true, timeout:12000, maximumAge:0});
+  });
+}
+
+$('act').onclick = async () => {
+  if (busy) return; busy = true; $('act').disabled = true;
+  $('msg').className = 'msg'; $('msg').textContent = 'بيحدد مكانك…';
+  const loc = await getLoc();
+  try {
+    const r = await call('punch', PIN, loc);
+    $('msg').textContent = (r.type === 'in' ? 'اتسجل Check-in' : 'اتسجل Check-out') + ' الساعة ' + r.time + (loc ? '' : ' — من غير موقع. فعّل الـ Location للمتصفح من إعدادات الموبايل');
+    if (!loc) $('msg').className = 'msg err';
+    await load();
+  } catch(e) { $('msg').className = 'msg err'; $('msg').textContent = 'التسجيل ماتمش: ' + clean(e.message); $('act').disabled = false; }
+  busy = false;
+};
+
+function syncType(){ const t = $('rType').value;
+  $('toBox').hidden = t === 'EarlyLeave'; $('timeBox').hidden = t !== 'EarlyLeave';
+  $('fileBox').hidden = t !== 'Sick'; $('fromLbl').textContent = t === 'EarlyLeave' ? 'اليوم' : 'من'; }
+$('rType').onchange = syncType; syncType();
+const todayStr = new Date().toLocaleDateString('en-CA'); $('rFrom').value = todayStr;
+
+function readFile(f){ return new Promise((res, rej) => { if (!f) return res(null);
+  if (f.size > 8e6) return rej(new Error('الملف كبير، ابعت صورة أصغر'));
+  const r = new FileReader(); r.onload = () => res({name:f.name, mime:f.type, data:String(r.result).split(',')[1]}); r.onerror = () => rej(new Error('مقدرتش أقرا الملف')); r.readAsDataURL(f); }); }
+
+$('rSend').onclick = async () => {
+  const q = {type:$('rType').value, from:$('rFrom').value, to:$('rTo').value, time:$('rTime').value, reason:$('rReason').value.trim()};
+  const m = $('rMsg'); m.className = 'msg';
+  if (!q.from) { m.className = 'msg err'; m.textContent = 'اختار التاريخ'; return; }
+  if (q.type === 'EarlyLeave' && !q.time) { m.className = 'msg err'; m.textContent = 'اكتب الساعة اللي هتمشي فيها'; return; }
+  $('rSend').disabled = true; m.textContent = 'بيتبعت…';
+  try {
+    q.file = await readFile($('rFile').files[0]);
+    await call('submitRequest', PIN, q);
+    m.textContent = 'الطلب اتبعت، ومستني الموافقة.';
+    $('rReason').value = ''; $('rFile').value = ''; $('rTo').value = '';
+    await load();
+  } catch(e) { m.className = 'msg err'; m.textContent = clean(e.message); }
+  $('rSend').disabled = false;
+};
+
+PIN = getPin();
+if (PIN) load(); else show('login');
+</script>
+</body>
+</html>
