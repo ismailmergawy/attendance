@@ -119,6 +119,7 @@ const $ = id => document.getElementById(id);
 const LBL = {Annual:'Annual',Casual:'Casual',Sick:'Sick',EarlyLeave:'يمشي بدري'};
 const ST = {Pending:'مستني',Approved:'اتوافق',Rejected:'اترفض'};
 let PIN = null, busy = false;
+function t12(s){ const m = String(s||'').match(/^(\d{1,2}):(\d{2})$/); if (!m) return s; const h = +m[1]; return (h % 12 || 12) + ':' + m[2] + (h < 12 ? ' AM' : ' PM'); }
 const API = 'https://script.google.com/macros/s/AKfycbyDWEWwOxTNfRb5opdWhLbDNS3Ts7_noBkWLvKJizIyixA7dbG-3bQrvnOLku5VVT4e/exec';
 async function call(fn, ...args){
   let r;
@@ -132,7 +133,7 @@ function show(id){ $('login').hidden = id !== 'login'; $('main').hidden = id !==
 function clean(m){ return String(m||'').replace(/^Error:\s*/, '').replace(/^Exception:\s*/, ''); }
 
 function tick(){ const n = new Date();
-  $('clock').textContent = n.toLocaleTimeString('ar-EG-u-nu-latn',{hour:'numeric',minute:'2-digit'});
+  $('clock').textContent = n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   $('date').textContent = n.toLocaleDateString('ar-EG-u-nu-latn',{weekday:'long',day:'numeric',month:'long'}); }
 tick(); setInterval(tick, 15000);
 
@@ -144,11 +145,11 @@ async function load(){
     show('main');
     $('who').textContent = s.name;
     const b = $('act'); b.className = 'act ' + s.next; b.textContent = s.next === 'in' ? 'Check-in' : 'Check-out'; b.disabled = false;
-    $('sIn').textContent = s.today.firstIn || '—';
-    $('sOut').textContent = s.today.lastOut || '—';
+    $('sIn').textContent = t12(s.today.firstIn) || '—';
+    $('sOut').textContent = t12(s.today.lastOut) || '—';
     $('sHrs').textContent = s.records.length ? hm(s.today.hours) : '—';
     $('sSt').textContent = s.today.status || (s.today.isOff ? 'أجازة' : '—');
-    $('rule').textContent = 'الحضور من 10 لحد ' + s.latest + '، وبعد كده بيتخصم نص يوم.';
+    $('rule').textContent = 'ميعاد حضورك لحد ' + t12(s.latest) + (s.lateAuto ? '، وبعد كده بيتخصم نص يوم.' : '.');
     $('bA').textContent = s.balances.annualLeft + ' من ' + s.balances.annualTotal;
     $('bC').textContent = s.balances.casualLeft + ' من ' + s.balances.casualTotal;
     const ul = $('reqs'); ul.textContent = '';
