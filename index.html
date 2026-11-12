@@ -76,6 +76,17 @@ li:last-child{border-bottom:0}
       <p class="muted" id="rule" style="margin:10px 0 0"></p>
     </div>
 
+    <div class="card" id="mCard" hidden>
+      <h2>الشهر ده</h2>
+      <div class="stats">
+        <div class="stat"><span>أيام شغل</span><b id="mD">—</b></div>
+        <div class="stat"><span>ساعات الشغل</span><b id="mH">—</b></div>
+        <div class="stat"><span>Overtime اتوافق عليه</span><b id="mO">—</b></div>
+        <div class="stat"><span>Overtime مستني موافقة</span><b id="mP">—</b></div>
+        <div class="stat"><span>أيام تأخير</span><b id="mL">—</b></div>
+      </div>
+    </div>
+
     <div class="card">
       <h2>رصيد الأجازات</h2>
       <div class="stats">
@@ -152,6 +163,7 @@ async function load(){
     $('rule').textContent = 'ميعاد حضورك لحد ' + t12(s.latest) + (s.lateAuto ? '، وبعد كده بيتخصم نص يوم.' : '.');
     $('bA').textContent = s.balances.annualLeft + ' من ' + s.balances.annualTotal;
     $('bC').textContent = s.balances.casualLeft + ' من ' + s.balances.casualTotal;
+    if (s.month) { $('mCard').hidden = false; $('mD').textContent = s.month.days; $('mH').textContent = hm(s.month.hours); $('mO').textContent = hm(s.month.ot); $('mP').textContent = hm(s.month.pending); $('mL').textContent = s.month.lates; }
     const ul = $('reqs'); ul.textContent = '';
     if (!s.requests.length) ul.innerHTML = '<li class="muted">مفيش طلبات لسه.</li>';
     s.requests.forEach(r => { const li = document.createElement('li');
