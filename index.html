@@ -71,7 +71,22 @@ li:last-child{border-bottom:0}
   <section id="exp" hidden style="display:flex;flex-direction:column;gap:14px">
     <div id="xList" style="display:flex;flex-direction:column;gap:10px">
       <div class="top"><h1>سجّل مصروف</h1><span class="who" id="xWho"></span></div>
-      <div class="card"><label for="xPick" style="margin-top:0">العربية (اللي في التشغيل)</label><select id="xPick"></select>
+      <div class="seg" id="xKind"><button type="button" data-v="car" class="on">🚗 على عربية</button><button type="button" data-v="petty">🧾 نثريات</button></div>
+      <div class="card" id="xPetty" hidden>
+        <label for="pType" style="margin-top:0">نوع المصروف</label><select id="pType"></select>
+        <div id="pTextBox" hidden><label for="pText">المصروف ده إيه؟</label><input id="pText" placeholder="مثلاً: مياه للمكتب"></div>
+        <div class="row2">
+          <div><label for="pAmt">المبلغ</label><input id="pAmt" inputmode="decimal"></div>
+          <div><label for="pFrom">اتدفع منين؟</label><select id="pFrom"><option value="Custody">من العهدة</option><option value="Employee">من جيبي (هسترده)</option></select></div>
+        </div>
+        <label for="pJob">على عربية؟ (اختياري)</label><select id="pJob"></select>
+        <label for="pPhoto">📷 صورة الإيصال (لو فيه)</label><input id="pPhoto" type="file" accept="image/*" capture="environment">
+        <img id="pPrev" alt="" hidden style="max-height:140px;border-radius:8px;margin-top:8px">
+        <label for="pNote">ملاحظة</label><input id="pNote">
+        <button class="btn" id="pSave">حفظ</button>
+        <div class="msg" id="pMsg"></div>
+      </div>
+      <div class="card" id="xCarBox"><label for="xPick" style="margin-top:0">العربية (اللي في التشغيل)</label><select id="xPick"></select>
         <div class="muted" style="margin-top:6px">مش لاقي العربية؟ لازم تكون في «Maintenance & Repair» على Asana — كلّم محمد محسن.</div></div>
       <div class="msg" id="xListMsg"></div>
       <div class="card"><h2>آخر مصاريفك</h2><ul id="xMine"><li class="muted">—</li></ul></div>
@@ -280,13 +295,13 @@ async function ops(fn, ...args){
   catch(e){ throw new Error('مفيش اتصال بالإنترنت، جرب تاني'); }
   const j = await r.json(); if (!j.ok) throw new Error(j.error); return j.data;
 }
-let XJOBS = [], XSUPS = [], XCUR = null, XPAY = '', XREC = null;
+let XJOBS = [], XSUPS = [], XCUR = null, XPAY = '', XREC = null, XPETTY = [], PREC = null;
 function tab(t){ TAB = t; $('tAtt').className = t === 'att' ? 'on' : ''; $('tExp').className = t === 'exp' ? 'on' : ''; show('main'); if (t === 'exp') xLoad(); }
 $('tAtt').onclick = () => tab('att'); $('tExp').onclick = () => tab('exp');
 function xView(v){ $('xList').hidden = v !== 'list'; $('xForm').hidden = v !== 'form'; window.scrollTo(0,0); }
 async function xLoad(){
   xView('list'); $('xListMsg').className = 'msg'; if (!XJOBS.length) $('xListMsg').textContent = 'بيحمّل…';
-  try { const r = await ops('staffHome'); XJOBS = r.jobs; XSUPS = r.suppliers; $('xListMsg').textContent = ''; xJobs(); xMine(r.money); }
+  try { const r = await ops('staffHome'); XJOBS = r.jobs; XSUPS = r.suppliers; XPETTY = r.petty || []; $('xListMsg').textContent = ''; xJobs(); xMine(r.money); pFill(); }
   catch(e){ $('xListMsg').className = 'msg err'; $('xListMsg').textContent = clean(e.message); }
 }
 function xJobs(){
@@ -310,6 +325,31 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
   ['xItem','xCost','xNoRec','xNote','xNsName','xNsPhone'].forEach(i => $(i).value = ''); $('xQty').value = '1'; $('xCat').value = 'Parts';
   $('xPhoto').value = ''; $('xPrev').hidden = true; $('xFromBox').hidden = true; $('xMsg').textContent = '';
   document.querySelectorAll('#xPay button').forEach(b => b.className = ''); xFillSup(); xView('form'); }
+function shrink(f, done){ const img = new Image(), url = URL.createObjectURL(f);
+  img.onload = () => { const k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    const d = c.toDataURL('image/jpeg', 0.72); URL.revokeObjectURL(url); done({data: d.split(',')[1], mime: 'image/jpeg'}, d); }; img.src = url; }
+document.querySelectorAll('#xKind button').forEach(b => b.onclick = () => { document.querySelectorAll('#xKind button').forEach(x => x.className = x === b ? 'on' : '');
+  $('xPetty').hidden = b.dataset.v !== 'petty'; $('xCarBox').hidden = b.dataset.v === 'petty'; $('xListMsg').textContent = ''; });
+function pFill(){ const t = $('pType'), keep = t.value; t.textContent = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'اختار'; t.append(o0);
+  XPETTY.forEach(x => { const o = document.createElement('option'); o.value = x.key; o.textContent = x.label; t.append(o); }); t.value = keep;
+  const j = $('pJob'), kj = j.value; j.textContent = ''; const n = document.createElement('option'); n.value = ''; n.textContent = 'لأ — مصروف عام'; j.append(n);
+  XJOBS.forEach(x => { const o = document.createElement('option'); o.value = x.jobNo; o.textContent = x.client + ' — ' + x.car + ' · ' + x.jobNo; j.append(o); }); j.value = kj; }
+$('pType').onchange = () => { $('pTextBox').hidden = $('pType').value !== 'other'; };
+$('pPhoto').onchange = function(){ const f = this.files && this.files[0]; PREC = null; $('pPrev').hidden = true; if (!f) return; shrink(f, (r, d) => { PREC = r; $('pPrev').src = d; $('pPrev').hidden = false; }); };
+$('pSave').onclick = async () => {
+  const m = $('pMsg'), err = t => { m.className = 'msg err'; m.textContent = t; };
+  const type = $('pType').value, amount = $('pAmt').value.trim();
+  if (!type) return err('اختار نوع المصروف'); if (type === 'other' && !$('pText').value.trim()) return err('اكتب المصروف ده إيه');
+  if (!(Number(amount) > 0)) return err('اكتب المبلغ');
+  $('pSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
+  try { await ops('pettyAdd', {type, text: $('pText').value.trim(), amount, from: $('pFrom').value, jobNo: $('pJob').value, receipt: PREC, note: $('pNote').value.trim()});
+    ['pAmt','pText','pNote'].forEach(i => $(i).value = ''); $('pType').value = ''; $('pJob').value = ''; $('pPhoto').value = ''; $('pPrev').hidden = true; PREC = null; $('pTextBox').hidden = true;
+    m.className = 'msg ok'; m.textContent = '✓ اتسجل'; const r = await ops('myMoney'); xMine(r); }
+  catch(e) { err(clean(e.message)); }
+  $('pSave').disabled = false;
+};
 $('xBack').onclick = () => { $('xPick').value = ''; xView('list'); };
 document.querySelectorAll('#xPay button').forEach(b => b.onclick = () => { XPAY = b.dataset.v;
   document.querySelectorAll('#xPay button').forEach(x => x.className = x === b ? 'on' : ''); $('xFromBox').hidden = XPAY !== 'Cash'; });
