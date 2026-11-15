@@ -71,7 +71,7 @@ li:last-child{border-bottom:0}
   <section id="exp" hidden style="display:flex;flex-direction:column;gap:14px">
     <div id="xList" style="display:flex;flex-direction:column;gap:10px">
       <div class="top"><h1>سجّل مصروف</h1><span class="who" id="xWho"></span></div>
-      <div class="seg" id="xKind"><button type="button" data-v="car" class="on">🚗 على عربية</button><button type="button" data-v="petty">🧾 نثريات</button></div>
+      <div class="seg" id="xKind"><button type="button" data-v="car" class="on">🚗 على عربية</button><button type="button" data-v="petty">🧾 مصروف عام</button></div>
       <div class="card" id="xPetty" hidden>
         <label for="pType" style="margin-top:0">نوع المصروف</label><select id="pType"></select>
         <div id="pTextBox" hidden><label for="pText">المصروف ده إيه؟</label><input id="pText" placeholder="مثلاً: مياه للمكتب"></div>
@@ -79,7 +79,7 @@ li:last-child{border-bottom:0}
           <div><label for="pAmt">المبلغ</label><input id="pAmt" inputmode="decimal"></div>
           <div><label for="pFrom">اتدفع منين؟</label><select id="pFrom"><option value="Custody">من العهدة</option><option value="Employee">من جيبي (هسترده)</option></select></div>
         </div>
-        <label for="pJob">على عربية؟ (اختياري)</label><select id="pJob"></select>
+        <div class="muted" style="margin-top:8px">أي حاجة تخص عربية (بنزين، مواصلات لجيبها، مشوار تجربة، أكل وقت شغلها) سجّلها من «على عربية».</div><select id="pJob" hidden></select>
         <label for="pPhoto">📷 صورة الإيصال (لو فيه)</label><input id="pPhoto" type="file" accept="image/*" capture="environment">
         <img id="pPrev" alt="" hidden style="max-height:140px;border-radius:8px;margin-top:8px">
         <label for="pNote">ملاحظة</label><input id="pNote">
@@ -95,16 +95,20 @@ li:last-child{border-bottom:0}
       <div class="top"><h1>مصروف جديد</h1><button class="link" id="xBack">رجوع</button></div>
       <div class="card"><b id="xJob"></b><div class="muted" id="xCar"></div></div>
       <div class="card">
-        <label for="xItem">البند</label><input id="xItem" placeholder="مثلاً: طقم تيل أمامي">
+        <label for="xJK" style="margin-top:0">نوع المصروف</label><select id="xJK"></select>
+        <div class="muted" id="xJKHint" style="margin-top:6px"></div>
+        <div id="xPartsA"><label for="xItem">البند</label><input id="xItem" placeholder="مثلاً: طقم تيل أمامي"></div>
         <div class="row2">
           <div><label for="xCost">المبلغ</label><input id="xCost" inputmode="decimal"></div>
-          <div><label for="xQty">العدد</label><input id="xQty" inputmode="numeric" value="1"></div>
+          <div id="xQtyBox"><label for="xQty">العدد</label><input id="xQty" inputmode="numeric" value="1"></div>
         </div>
+        <div id="xPartsB">
         <label for="xCat">النوع</label><select id="xCat"><option value="Parts">قطع غيار</option><option value="Labour">مصنعية</option><option value="Other">أخرى (بنزين، مشاوير، غسيل…)</option></select>
         <label>كاش ولا أجل؟</label><div class="seg" id="xPay"><button type="button" data-v="Cash">كاش</button><button type="button" data-v="Credit">أجل على المورد</button></div>
+        </div>
         <div id="xFromBox" hidden><label for="xFrom">الكاش اتدفع منين؟</label><select id="xFrom"><option value="Custody">من العهدة</option><option value="Employee">من جيبي (هسترده)</option></select></div>
-        <label for="xSup">المورد</label><select id="xSup"></select>
-        <div id="xNew" hidden><div class="row2"><div><label for="xNsName">اسم المورد</label><input id="xNsName"></div><div><label for="xNsPhone">تليفونه</label><input id="xNsPhone" inputmode="tel"></div></div></div>
+        <div id="xPartsC"><label for="xSup">المورد</label><select id="xSup"></select>
+        <div id="xNew" hidden><div class="row2"><div><label for="xNsName">اسم المورد</label><input id="xNsName"></div><div><label for="xNsPhone">تليفونه</label><input id="xNsPhone" inputmode="tel"></div></div></div></div>
         <label for="xPhoto">📷 صورة الإيصال</label><input id="xPhoto" type="file" accept="image/*" capture="environment">
         <img id="xPrev" alt="" hidden style="max-height:160px;border-radius:8px;margin-top:8px">
         <label for="xNoRec">مفيش إيصال؟ اكتب ليه</label><input id="xNoRec">
@@ -295,13 +299,13 @@ async function ops(fn, ...args){
   catch(e){ throw new Error('مفيش اتصال بالإنترنت، جرب تاني'); }
   const j = await r.json(); if (!j.ok) throw new Error(j.error); return j.data;
 }
-let XJOBS = [], XSUPS = [], XCUR = null, XPAY = '', XREC = null, XPETTY = [], PREC = null;
+let XJOBS = [], XSUPS = [], XCUR = null, XPAY = '', XREC = null, XPETTY = [], PREC = null, XJC = [];
 function tab(t){ TAB = t; $('tAtt').className = t === 'att' ? 'on' : ''; $('tExp').className = t === 'exp' ? 'on' : ''; show('main'); if (t === 'exp') xLoad(); }
 $('tAtt').onclick = () => tab('att'); $('tExp').onclick = () => tab('exp');
 function xView(v){ $('xList').hidden = v !== 'list'; $('xForm').hidden = v !== 'form'; window.scrollTo(0,0); }
 async function xLoad(){
   xView('list'); $('xListMsg').className = 'msg'; if (!XJOBS.length) $('xListMsg').textContent = 'بيحمّل…';
-  try { const r = await ops('staffHome'); XJOBS = r.jobs; XSUPS = r.suppliers; XPETTY = r.petty || []; $('xListMsg').textContent = ''; xJobs(); xMine(r.money); pFill(); }
+  try { const r = await ops('staffHome'); XJOBS = r.jobs; XSUPS = r.suppliers; XPETTY = r.petty || []; XJC = r.jobCost || []; $('xListMsg').textContent = ''; xJobs(); xMine(r.money); pFill(); }
   catch(e){ $('xListMsg').className = 'msg err'; $('xListMsg').textContent = clean(e.message); }
 }
 function xJobs(){
@@ -324,7 +328,16 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
   $('xJob').textContent = j.jobNo + ' — ' + j.client; $('xCar').textContent = j.car + (j.plate ? ' · ' + j.plate : '');
   ['xItem','xCost','xNoRec','xNote','xNsName','xNsPhone'].forEach(i => $(i).value = ''); $('xQty').value = '1'; $('xCat').value = 'Parts';
   $('xPhoto').value = ''; $('xPrev').hidden = true; $('xFromBox').hidden = true; $('xMsg').textContent = '';
-  document.querySelectorAll('#xPay button').forEach(b => b.className = ''); xFillSup(); xView('form'); }
+  document.querySelectorAll('#xPay button').forEach(b => b.className = ''); xFillSup();
+  const k = $('xJK'); k.textContent = ''; [['parts','🔩 قطع غيار / ورشة / حاجة من مورد']].concat(XJC.map(x => [x.key, ({fuel:'⛽ ',transport:'🚕 ',test:'🧪 ',food:'🍽 '}[x.key]||'') + x.label + (x.internal ? ' (علينا)' : ' (على العميل)')]))
+    .forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; k.append(op); }); k.value = 'parts'; xJKSync(); xView('form'); }
+function xJKSync(){ const quick = $('xJK').value !== 'parts';
+  ['xPartsA','xPartsB','xPartsC','xQtyBox'].forEach(i => $(i).hidden = quick);
+  $('xNoRec').parentNode.querySelector('label[for=xNoRec]').hidden = quick; $('xNoRec').hidden = quick;
+  $('xJKHint').textContent = { fuel: 'بنزين اتحط في عربية العميل نفسها — بيتحسب عليه.', transport: 'مواصلات رايح تجيب العربية أو تسلّمها — بتتحسب على العربية.',
+    test: 'مشوار زيادة أو تجربة — بيتسجل على العربية علشان نعرف تكلفتها، بس مش بيطلع في فاتورة العميل.', food: 'أكل وقت الشغل على العربية دي — بيتسجل عليها ومش بيطلع في الفاتورة.' }[$('xJK').value] || '';
+  if (quick) { XPAY = 'Cash'; $('xFromBox').hidden = false; document.querySelectorAll('#xPay button').forEach(x => x.className = x.dataset.v === 'Cash' ? 'on' : ''); } }
+$('xJK').onchange = xJKSync;
 function shrink(f, done){ const img = new Image(), url = URL.createObjectURL(f);
   img.onload = () => { const k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
     c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
@@ -362,7 +375,14 @@ $('xPhoto').onchange = function(){ const f = this.files && this.files[0]; XREC =
   img.onerror = () => { $('xMsg').className = 'msg err'; $('xMsg').textContent = 'الصورة مفتحتش، جرّب تاني'; }; img.src = url; };
 $('xSave').onclick = async () => {
   const m = $('xMsg'), err = t => { m.className = 'msg err'; m.textContent = t; };
+  const kind = $('xJK').value, quick = kind !== 'parts';
   const item = $('xItem').value.trim(), cost = $('xCost').value.trim(); let sup = $('xSup').value;
+  if (quick) { if (!(Number(cost) > 0)) return err('اكتب المبلغ');
+    $('xSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
+    try { await ops('addExpense', {jobNo: XCUR.jobNo, kind, cost, from: $('xFrom').value, note: $('xNote').value.trim(), receipt: XREC, noReceipt: XREC ? '' : $('xNoRec').value.trim()});
+      const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل على ' + no; }
+    catch(e) { err(clean(e.message)); }
+    $('xSave').disabled = false; return; }
   if (!item) return err('اكتب البند'); if (!(Number(cost) > 0)) return err('اكتب المبلغ');
   if (!XPAY) return err('اختار كاش ولا أجل'); if (!sup) return err('اختار المورد');
   if (sup === '__new' && (!$('xNsName').value.trim() || $('xNsPhone').value.replace(/\D/g,'').length < 8)) return err('اكتب اسم المورد الجديد ورقم تليفونه');
