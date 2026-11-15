@@ -71,9 +71,9 @@ li:last-child{border-bottom:0}
   <section id="exp" hidden style="display:flex;flex-direction:column;gap:14px">
     <div id="xList" style="display:flex;flex-direction:column;gap:10px">
       <div class="top"><h1>سجّل مصروف</h1><span class="who" id="xWho"></span></div>
-      <input id="xFind" placeholder="ابحث باسم العميل أو العربية أو رقم الـ Job" autocomplete="off">
+      <div class="card"><label for="xPick" style="margin-top:0">العربية (اللي في التشغيل)</label><select id="xPick"></select>
+        <div class="muted" style="margin-top:6px">مش لاقي العربية؟ لازم تكون في «Maintenance & Repair» على Asana — كلّم محمد محسن.</div></div>
       <div class="msg" id="xListMsg"></div>
-      <div id="xJobs" style="display:flex;flex-direction:column;gap:10px"></div>
       <div class="card"><h2>آخر مصاريفك</h2><ul id="xMine"><li class="muted">—</li></ul></div>
     </div>
     <div id="xForm" hidden style="display:flex;flex-direction:column;gap:12px">
@@ -290,16 +290,12 @@ async function xLoad(){
   catch(e){ $('xListMsg').className = 'msg err'; $('xListMsg').textContent = clean(e.message); }
 }
 function xJobs(){
-  const box = $('xJobs'), q = $('xFind').value.trim().toLowerCase(); box.textContent = '';
-  const xs = XJOBS.filter(j => !q || (j.client + ' ' + j.car + ' ' + (j.plate||'') + ' ' + j.jobNo).toLowerCase().includes(q));
-  if (!xs.length) { const d = document.createElement('div'); d.className = 'muted'; d.textContent = 'مفيش عربية بالاسم ده. لو الشغلانة لسه مش على Asana، كلّم محمد محسن.'; box.append(d); }
-  xs.forEach(j => { const c = document.createElement('div'); c.className = 'card job';
-    const b = document.createElement('b'); b.textContent = j.client;
-    const m = document.createElement('div'); m.className = 'muted'; m.textContent = j.car + (j.plate ? ' · ' + j.plate : '') + ' · ' + j.jobNo;
-    const g = document.createElement('div'); g.className = 'go'; g.textContent = '+ سجّل مصروف';
-    c.append(b, m, g); c.onclick = () => xOpen(j); box.append(c); });
+  const s = $('xPick'); s.textContent = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = XJOBS.length ? 'اختار العربية (' + XJOBS.length + ')' : 'مفيش عربيات في التشغيل دلوقتي'; s.append(o0);
+  XJOBS.slice().sort((a, b) => a.client.localeCompare(b.client)).forEach(j => { const o = document.createElement('option'); o.value = j.jobNo;
+    o.textContent = j.client + ' — ' + j.car + (j.plate ? ' · ' + j.plate : '') + ' · ' + j.jobNo; s.append(o); });
 }
-$('xFind').oninput = xJobs;
+$('xPick').onchange = () => { const j = XJOBS.find(x => x.jobNo === $('xPick').value); if (j) xOpen(j); };
 function xMine(m){ const ul = $('xMine'); ul.textContent = '';
   if (!m || !m.list.length) { ul.innerHTML = '<li class="muted">لسه مفيش مصاريف.</li>'; return; }
   m.list.forEach(x => { const li = document.createElement('li'), a = document.createElement('span'), v = document.createElement('b');
@@ -314,7 +310,7 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
   ['xItem','xCost','xNoRec','xNote','xNsName','xNsPhone'].forEach(i => $(i).value = ''); $('xQty').value = '1'; $('xCat').value = 'Parts';
   $('xPhoto').value = ''; $('xPrev').hidden = true; $('xFromBox').hidden = true; $('xMsg').textContent = '';
   document.querySelectorAll('#xPay button').forEach(b => b.className = ''); xFillSup(); xView('form'); }
-$('xBack').onclick = () => xView('list');
+$('xBack').onclick = () => { $('xPick').value = ''; xView('list'); };
 document.querySelectorAll('#xPay button').forEach(b => b.onclick = () => { XPAY = b.dataset.v;
   document.querySelectorAll('#xPay button').forEach(x => x.className = x === b ? 'on' : ''); $('xFromBox').hidden = XPAY !== 'Cash'; });
 // receipt photo: shrunk on the phone (max 1400px JPEG) so it uploads quickly
