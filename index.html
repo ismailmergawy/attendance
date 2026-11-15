@@ -75,14 +75,10 @@ li:last-child{border-bottom:0}
       <div class="card" id="xPetty" hidden>
         <label for="pType" style="margin-top:0">نوع المصروف</label><select id="pType"></select>
         <div id="pTextBox" hidden><label for="pText">المصروف ده إيه؟</label><input id="pText" placeholder="مثلاً: مياه للمكتب"></div>
-        <div class="row2">
-          <div><label for="pAmt">المبلغ</label><input id="pAmt" inputmode="decimal"></div>
-          <div><label for="pFrom">اتدفع منين؟</label><select id="pFrom"><option value="Custody">من العهدة</option><option value="Employee">من جيبي (هسترده)</option></select></div>
-        </div>
+        <label for="pAmt">المبلغ</label><input id="pAmt" inputmode="decimal">
+        <label style="display:flex;gap:8px;align-items:center;color:var(--fg);font-size:14px"><input type="checkbox" id="pOwn" style="width:auto"> دفعتها من جيبي (هستردها)</label>
         <div class="muted" style="margin-top:8px">أي حاجة تخص عربية (بنزين، مواصلات لجيبها، مشوار تجربة، أكل وقت شغلها) سجّلها من «على عربية».</div><select id="pJob" hidden></select>
-        <label for="pPhoto">📷 صورة الإيصال (لو فيه)</label><input id="pPhoto" type="file" accept="image/*" capture="environment">
-        <img id="pPrev" alt="" hidden style="max-height:140px;border-radius:8px;margin-top:8px">
-        <label for="pNote">ملاحظة</label><input id="pNote">
+        <label for="pNote">ملاحظة (لو حابب)</label><input id="pNote">
         <button class="btn" id="pSave">حفظ</button>
         <div class="msg" id="pMsg"></div>
       </div>
@@ -334,8 +330,10 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
 function xJKSync(){ const quick = $('xJK').value !== 'parts';
   ['xPartsA','xPartsB','xPartsC','xQtyBox'].forEach(i => $(i).hidden = quick);
   $('xNoRec').parentNode.querySelector('label[for=xNoRec]').hidden = quick; $('xNoRec').hidden = quick;
+  const internal = ['test','food'].includes($('xJK').value);
+  $('xPhoto').hidden = internal; $('xPhoto').parentNode.querySelector('label[for=xPhoto]').hidden = internal; if (internal) { $('xPhoto').value = ''; XREC = null; $('xPrev').hidden = true; }
   $('xJKHint').textContent = { fuel: 'بنزين اتحط في عربية العميل نفسها — بيتحسب عليه.', transport: 'مواصلات رايح تجيب العربية أو تسلّمها — بتتحسب على العربية.',
-    test: 'مشوار زيادة أو تجربة — بيتسجل على العربية علشان نعرف تكلفتها، بس مش بيطلع في فاتورة العميل.', food: 'أكل وقت الشغل على العربية دي — بيتسجل عليها ومش بيطلع في الفاتورة.' }[$('xJK').value] || '';
+    test: 'مشوار زيادة أو تجربة — علينا إحنا، مش بيطلع للعميل ولا على Asana.', food: 'أكل وقت الشغل على العربية دي — علينا إحنا، مش بيطلع للعميل ولا على Asana.' }[$('xJK').value] || '';
   if (quick) { XPAY = 'Cash'; $('xFromBox').hidden = false; document.querySelectorAll('#xPay button').forEach(x => x.className = x.dataset.v === 'Cash' ? 'on' : ''); } }
 $('xJK').onchange = xJKSync;
 function shrink(f, done){ const img = new Image(), url = URL.createObjectURL(f);
@@ -350,15 +348,14 @@ function pFill(){ const t = $('pType'), keep = t.value; t.textContent = '';
   const j = $('pJob'), kj = j.value; j.textContent = ''; const n = document.createElement('option'); n.value = ''; n.textContent = 'لأ — مصروف عام'; j.append(n);
   XJOBS.forEach(x => { const o = document.createElement('option'); o.value = x.jobNo; o.textContent = x.client + ' — ' + x.car + ' · ' + x.jobNo; j.append(o); }); j.value = kj; }
 $('pType').onchange = () => { $('pTextBox').hidden = $('pType').value !== 'other'; };
-$('pPhoto').onchange = function(){ const f = this.files && this.files[0]; PREC = null; $('pPrev').hidden = true; if (!f) return; shrink(f, (r, d) => { PREC = r; $('pPrev').src = d; $('pPrev').hidden = false; }); };
 $('pSave').onclick = async () => {
   const m = $('pMsg'), err = t => { m.className = 'msg err'; m.textContent = t; };
   const type = $('pType').value, amount = $('pAmt').value.trim();
   if (!type) return err('اختار نوع المصروف'); if (type === 'other' && !$('pText').value.trim()) return err('اكتب المصروف ده إيه');
   if (!(Number(amount) > 0)) return err('اكتب المبلغ');
   $('pSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
-  try { await ops('pettyAdd', {type, text: $('pText').value.trim(), amount, from: $('pFrom').value, jobNo: $('pJob').value, receipt: PREC, note: $('pNote').value.trim()});
-    ['pAmt','pText','pNote'].forEach(i => $(i).value = ''); $('pType').value = ''; $('pJob').value = ''; $('pPhoto').value = ''; $('pPrev').hidden = true; PREC = null; $('pTextBox').hidden = true;
+  try { await ops('pettyAdd', {type, text: $('pText').value.trim(), amount, from: $('pOwn').checked ? 'Employee' : 'Custody', note: $('pNote').value.trim()});
+    ['pAmt','pText','pNote'].forEach(i => $(i).value = ''); $('pType').value = ''; $('pOwn').checked = false; $('pTextBox').hidden = true;
     m.className = 'msg ok'; m.textContent = '✓ اتسجل'; const r = await ops('myMoney'); xMine(r); }
   catch(e) { err(clean(e.message)); }
   $('pSave').disabled = false;
