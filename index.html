@@ -178,7 +178,15 @@ li:last-child{border-bottom:0}
       <ul id="reqs"><li class="muted">مفيش طلبات لسه.</li></ul>
     </div>
 
-    <button class="link" id="logout">مش إنت؟ خروج</button>
+    <div class="card" id="pinCard" hidden>
+      <h2>🔑 غيّر الرقم السري</h2>
+      <div class="muted">ده نفس الرقم اللي بتدخل بيه الحضور والمصاريف. لازم 4 لـ 6 أرقام، ومحدش يعرفه غيرك.</div>
+      <label for="np1">الرقم الجديد</label><input id="np1" type="password" inputmode="numeric" autocomplete="new-password">
+      <label for="np2">اكتبه تاني</label><input id="np2" type="password" inputmode="numeric" autocomplete="new-password">
+      <button class="btn" id="npSave">تغيير</button>
+      <div class="msg" id="npMsg"></div>
+    </div>
+    <div class="top" style="justify-content:center;gap:18px"><button class="link" id="pinOpen">🔑 غيّر الرقم السري</button><button class="link" id="logout">مش إنت؟ خروج</button></div>
   </section>
 </div>
 
@@ -237,6 +245,15 @@ $('loginBtn').onclick = async () => {
   const p = $('pin').value.trim(); if (!p) return;
   $('loginBtn').disabled = true; $('loginMsg').textContent = '';
   PIN = p; savePin(p); await load(); $('loginBtn').disabled = false;
+};
+$('pinOpen').onclick = () => { $('pinCard').hidden = !$('pinCard').hidden; $('np1').value = $('np2').value = ''; $('npMsg').textContent = ''; };
+$('npSave').onclick = async () => {
+  const a = $('np1').value.trim(), b = $('np2').value.trim(), m = $('npMsg'), err = t => { m.className = 'msg err'; m.textContent = t; };
+  if (!/^\d{4,6}$/.test(a)) return err('الرقم لازم يكون من 4 لـ 6 أرقام'); if (a !== b) return err('الرقمين مش زي بعض');
+  $('npSave').disabled = true; m.className = 'msg'; m.textContent = 'بيغيّر…';
+  try { await ops('changePin', {pin: a}); PIN = a; savePin(a); m.className = 'msg ok'; m.textContent = '✓ اتغيّر — استخدم الرقم الجديد من دلوقتي'; $('np1').value = $('np2').value = ''; }
+  catch (e) { err(clean(e.message)); }
+  $('npSave').disabled = false;
 };
 $('logout').onclick = () => { savePin(null); PIN = null; $('pin').value = ''; show('login'); };
 
