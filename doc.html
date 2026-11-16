@@ -35,7 +35,7 @@ iframe{width:100%;height:70vh;border:1px solid var(--line);border-radius:10px;ba
     <h1 id="name">بيحمّل الملف…</h1>
     <div class="muted" id="hint"></div>
     <div id="acts" hidden>
-      <button class="main" id="share">📲 ابعت الملف (واتساب / إيميل / …)</button>
+      <button class="main" id="share">📲 ابعت الملف (WhatsApp)</button>
       <button class="sec" id="dl">⬇️ تنزيل PDF</button>
       <a class="sec" id="gd" target="_blank" rel="noopener" hidden style="display:block;text-align:center;text-decoration:none;border-radius:12px;padding:15px;font-weight:600;margin-top:10px">📂 افتح في Google Drive (تنزيل / شير)</a>
     </div>
@@ -59,7 +59,7 @@ async function load(){
     document.title = j.data.name; $('name').textContent = j.data.name; $('acts').hidden = false;
     const canShare = navigator.canShare && navigator.canShare({files: [FILE]});
     $('share').hidden = !canShare;
-    $('hint').textContent = canShare ? 'اختار WhatsApp وابعته للعميل — هيوصل كملف PDF.' : 'الجهاز ده مش بيدعم الشير المباشر. نزّل الملف وابعته كمرفق.';
+    $('hint').textContent = canShare ? 'دوس «ابعت الملف» واختار WhatsApp — الفاتورة هتوصل كملف PDF مش لينك.' : 'الجهاز ده مش بيدعم الشير المباشر. نزّل الملف وابعته كمرفق.';
     $('view').src = URLX; $('view').hidden = false;
   } catch (e) { $('name').textContent = 'الملف مش متاح'; msg(e.message || 'جرّب تاني', true); }
 }
