@@ -57,17 +57,24 @@ async function load(){
     FILE = new File([a], j.data.name, {type: 'application/pdf'}); URLX = URL.createObjectURL(FILE);
     if (j.data.drive) { $('gd').href = j.data.drive; $('gd').hidden = false; }
     document.title = j.data.name; $('name').textContent = j.data.name; $('acts').hidden = false;
-    const canShare = navigator.canShare && navigator.canShare({files: [FILE]});
-    $('share').hidden = !canShare;
-    $('hint').textContent = canShare ? 'دوس «ابعت الملف» واختار WhatsApp — الفاتورة هتوصل كملف PDF مش لينك.' : 'الجهاز ده مش بيدعم الشير المباشر. نزّل الملف وابعته كمرفق.';
+    const canShare = MOBILE && navigator.canShare && navigator.canShare({files: [FILE]});
+    $('share').hidden = false;
+    if (!canShare) $('share').textContent = '📲 نزّل الملف وافتح WhatsApp';
+    $('hint').textContent = canShare ? 'دوس «ابعت الملف» واختار WhatsApp — الفاتورة هتوصل كملف PDF مش لينك.'
+      : 'على الكمبيوتر: الزرار بينزّل الملف ويفتح WhatsApp — افتح شات العميل واسحب الملف من Downloads جوه الشات (أو 📎 ← Document).';
     $('view').src = URLX; $('view').hidden = false;
   } catch (e) { $('name').textContent = 'الملف مش متاح'; msg(e.message || 'جرّب تاني', true); }
 }
+const MOBILE = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+function save(){ const a = document.createElement('a'); a.href = URLX; a.download = FILE.name; document.body.append(a); a.click(); a.remove(); }
+function desk(){ save(); msg('✓ الملف نزل في Downloads — WhatsApp بيفتح: اختار شات العميل واسحب الملف جوه الشات.');
+  setTimeout(() => { location.href = 'whatsapp://'; }, 600); setTimeout(() => { if (document.hasFocus()) window.open('https://web.whatsapp.com/', '_blank'); }, 2500); }
 $('share').onclick = async () => {
+  if (!(MOBILE && navigator.canShare && navigator.canShare({files: [FILE]}))) return desk();
   try { await navigator.share({files: [FILE], title: FILE.name}); }
-  catch (e) { if (e && e.name !== 'AbortError') msg('الشير مش متاح — نزّل الملف وابعته كمرفق', true); }
+  catch (e) { if (e && e.name !== 'AbortError') desk(); }
 };
-$('dl').onclick = () => { const a = document.createElement('a'); a.href = URLX; a.download = FILE.name; document.body.append(a); a.click(); a.remove(); };
+$('dl').onclick = save;
 load();
 </script>
 </body>
