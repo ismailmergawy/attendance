@@ -44,7 +44,7 @@ li:last-child{border-bottom:0}
 .tabs button{border:0;border-radius:9px;padding:10px;background:none;color:var(--muted);font-weight:600}
 .tabs button.on{background:var(--accent);color:#fff}
 .job{cursor:pointer}.job b{display:block}.job .go{color:var(--accent);font-weight:600;font-size:14px;margin-top:4px}
-.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}.seg button{border:1px solid var(--line);border-radius:10px;padding:11px;background:var(--surface);color:var(--fg);font-weight:600}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}.seg button{border:1px solid var(--line);border-radius:10px;padding:11px;background:var(--surface);color:var(--fg);font-weight:600}
 .seg button.on{background:var(--out);color:#fff;border-color:var(--out)}
 .ok{color:var(--in)}
 [hidden]{display:none!important}
@@ -71,7 +71,7 @@ li:last-child{border-bottom:0}
   <section id="exp" hidden style="display:flex;flex-direction:column;gap:14px">
     <div id="xList" style="display:flex;flex-direction:column;gap:10px">
       <div class="top"><h1>سجّل مصروف</h1><span class="who" id="xWho"></span></div>
-      <div class="seg" id="xKind"><button type="button" data-v="car" class="on">🚗 على عربية</button><button type="button" data-v="petty">🧾 مصروف عام</button></div>
+      <div class="seg" id="xKind"><button type="button" data-v="car" class="on">🚗 على عربية</button><button type="button" data-v="petty">🧾 مصروف عام</button><button type="button" data-v="deal" id="xKindDeal" hidden>🏷 عربية للبيع</button></div>
       <div class="card" id="xPetty" hidden>
         <label for="pType" style="margin-top:0">نوع المصروف</label><select id="pType"></select>
         <div id="pTextBox" hidden><label for="pText">المصروف ده إيه؟</label><input id="pText" placeholder="مثلاً: مياه للمكتب"></div>
@@ -81,6 +81,18 @@ li:last-child{border-bottom:0}
         <label for="pNote">ملاحظة (لو حابب)</label><input id="pNote">
         <button class="btn" id="pSave">حفظ</button>
         <div class="msg" id="pMsg"></div>
+      </div>
+      <div class="card" id="xDeal" hidden>
+        <label for="dPick" style="margin-top:0">العربية اللي بتبيعها</label><select id="dPick"></select>
+        <div class="muted" id="dSpent" style="margin-top:6px"></div>
+        <label for="dItem">المصروف ده إيه؟</label><input id="dItem" placeholder="مثلاً: غسيل وتلميع، إعلان، فحص، بنزين">
+        <label for="dAmt">المبلغ</label><input id="dAmt" inputmode="decimal">
+        <label style="display:flex;gap:8px;align-items:center;color:var(--fg);font-size:14px"><input type="checkbox" id="dOwn" style="width:auto"> دفعتها من جيبي (هستردها)</label>
+        <label for="dPhoto">📷 صورة الإيصال (لو فيه) — صوّر أو اختار من الصور</label><input id="dPhoto" type="file" accept="image/*">
+        <label for="dNote">ملاحظة (لو حابب)</label><input id="dNote">
+        <button class="btn" id="dSave">حفظ</button>
+        <div class="msg" id="dMsg"></div>
+        <div class="muted" style="margin-top:8px">المصاريف دي بتوصل لإسماعيل بس، ومش بتنزل على Asana.</div>
       </div>
       <div class="card" id="xCarBox"><label for="xPick" style="margin-top:0">العربية (اللي في التشغيل)</label><select id="xPick"></select>
         <div class="muted" style="margin-top:6px">مش لاقي العربية؟ لازم تكون في «Maintenance & Repair» على Asana — كلّم محمد محسن.</div></div>
@@ -312,13 +324,13 @@ async function ops(fn, ...args){
   catch(e){ throw new Error('مفيش اتصال بالإنترنت، جرب تاني'); }
   const j = await r.json(); if (!j.ok) throw new Error(j.error); return j.data;
 }
-let XJOBS = [], XSUPS = [], XCUR = null, XPAY = '', XREC = null, XPETTY = [], PREC = null, XJC = [];
+let XJOBS = [], XSUPS = [], XCUR = null, XPAY = '', XREC = null, XPETTY = [], PREC = null, XJC = [], XDEALS = null, DREC = null;
 function tab(t){ TAB = t; $('tAtt').className = t === 'att' ? 'on' : ''; $('tExp').className = t === 'exp' ? 'on' : ''; show('main'); if (t === 'exp') xLoad(); }
 $('tAtt').onclick = () => tab('att'); $('tExp').onclick = () => tab('exp');
 function xView(v){ $('xList').hidden = v !== 'list'; $('xForm').hidden = v !== 'form'; window.scrollTo(0,0); }
 async function xLoad(){
   xView('list'); $('xListMsg').className = 'msg'; if (!XJOBS.length) $('xListMsg').textContent = 'بيحمّل…';
-  try { const r = await ops('staffHome'); XJOBS = r.jobs; XSUPS = r.suppliers; XPETTY = r.petty || []; XJC = r.jobCost || []; $('xListMsg').textContent = ''; xJobs(); xMine(r.money); pFill(); }
+  try { const r = await ops('staffHome'); XJOBS = r.jobs; XSUPS = r.suppliers; XPETTY = r.petty || []; XJC = r.jobCost || []; XDEALS = r.deals || null; $('xListMsg').textContent = ''; xJobs(); xMine(r.money); pFill(); dFill(); }
   catch(e){ $('xListMsg').className = 'msg err'; $('xListMsg').textContent = clean(e.message); }
 }
 function xJobs(){
@@ -358,7 +370,23 @@ function shrink(f, done){ const img = new Image(), url = URL.createObjectURL(f);
     c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
     const d = c.toDataURL('image/jpeg', 0.72); URL.revokeObjectURL(url); done({data: d.split(',')[1], mime: 'image/jpeg'}, d); }; img.src = url; }
 document.querySelectorAll('#xKind button').forEach(b => b.onclick = () => { document.querySelectorAll('#xKind button').forEach(x => x.className = x === b ? 'on' : '');
-  $('xPetty').hidden = b.dataset.v !== 'petty'; $('xCarBox').hidden = b.dataset.v === 'petty'; $('xListMsg').textContent = ''; });
+  $('xPetty').hidden = b.dataset.v !== 'petty'; $('xDeal').hidden = b.dataset.v !== 'deal'; $('xCarBox').hidden = b.dataset.v !== 'car'; $('xListMsg').textContent = ''; });
+/* cars on sale: only the team member the deal is assigned to sees it and records its expenses */
+function dFill(){ $('xKindDeal').hidden = !XDEALS; if (!XDEALS) return; const s = $('dPick'), keep = s.value; s.textContent = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = XDEALS.length ? 'اختار العربية (' + XDEALS.length + ')' : 'مفيش عربيات بيع متسجلة باسمك'; s.append(o0);
+  XDEALS.forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = (d.kind === 'Buy' ? '🛒 ' : '🏷 ') + d.car; s.append(o); }); s.value = keep; dShow(); }
+function dShow(){ const d = (XDEALS || []).find(x => x.id === $('dPick').value); $('dSpent').textContent = d ? 'صرفت عليها لحد دلوقتي: ' + Number(d.spent).toLocaleString('en-US') + ' جنيه' + (d.list.length ? ' — آخر حاجة: ' + d.list[0].item + ' ' + Number(d.list[0].amount).toLocaleString('en-US') : '') : ''; }
+$('dPick').onchange = dShow;
+$('dPhoto').onchange = () => { const f = $('dPhoto').files[0]; DREC = null; if (f) shrink(f, r => { DREC = r; }); };
+$('dSave').onclick = async () => {
+  const m = $('dMsg'), err = t => { m.className = 'msg err'; m.textContent = t; };
+  if (!$('dPick').value) return err('اختار العربية'); if (!$('dItem').value.trim()) return err('اكتب المصروف ده إيه'); if (!(Number($('dAmt').value) > 0)) return err('اكتب المبلغ');
+  $('dSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
+  try { const r = await ops('saleExpStaff', {saleId: $('dPick').value, item: $('dItem').value.trim(), amount: $('dAmt').value.trim(), from: $('dOwn').checked ? 'Employee' : 'Custody', note: $('dNote').value.trim(), receipt: DREC});
+    XDEALS = r.deals; ['dItem','dAmt','dNote'].forEach(i => $(i).value = ''); $('dOwn').checked = false; $('dPhoto').value = ''; DREC = null; dFill(); xMine(r.money);
+    m.className = 'msg ok'; m.textContent = '✓ اتسجل'; }
+  catch(e) { err(clean(e.message)); }
+  $('dSave').disabled = false; };
 function pFill(){ const t = $('pType'), keep = t.value; t.textContent = '';
   const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'اختار'; t.append(o0);
   XPETTY.forEach(x => { const o = document.createElement('option'); o.value = x.key; o.textContent = x.label; t.append(o); }); t.value = keep;
