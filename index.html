@@ -102,16 +102,20 @@ li:last-child{border-bottom:0}
     <div id="xForm" hidden style="display:flex;flex-direction:column;gap:12px">
       <div class="top"><h1>مصروف جديد</h1><button class="link" id="xBack">رجوع</button></div>
       <div class="card"><b id="xJob"></b><div class="muted" id="xCar"></div></div>
+      <div class="card" id="xDone"><b>اللي اتسجل على العربية دي</b><div class="muted" style="font-size:13px">بص هنا الأول علشان ما تسجلش حاجة اتسجلت قبل كده</div><ul id="xDoneL"><li class="muted">بيحمّل…</li></ul></div>
       <div class="card">
         <label for="xJK" style="margin-top:0">نوع المصروف</label><select id="xJK"></select>
         <div class="muted" id="xJKHint" style="margin-top:6px"></div>
         <div id="xPartsA"><label for="xItem">البند</label><input id="xItem" placeholder="مثلاً: طقم تيل أمامي"></div>
         <div class="row2">
-          <div><label for="xCost">المبلغ</label><input id="xCost" inputmode="decimal"></div>
+          <div><label for="xCost">المبلغ (الإجمالي)</label><input id="xCost" inputmode="decimal"></div>
           <div id="xQtyBox"><label for="xQty">العدد</label><input id="xQty" inputmode="numeric" value="1"></div>
         </div>
         <div id="xPartsB">
         <label for="xCat">النوع</label><select id="xCat"><option value="Parts">قطع غيار</option><option value="Labour">مصنعية</option><option value="Other">أخرى (بنزين، مشاوير، غسيل…)</option></select>
+        <div id="xMore"></div>
+        <button type="button" class="link" id="xAddLine" style="text-align:start;padding:8px 0">+ بند تاني من نفس المورد</button>
+        <div class="muted" id="xTot" style="font-weight:600"></div>
         <label>كاش ولا أجل؟</label><div class="seg" id="xPay"><button type="button" data-v="Cash">كاش</button><button type="button" data-v="Credit">أجل على المورد</button></div>
         </div>
         <div id="xFromBox" hidden><label for="xFrom">الكاش اتدفع منين؟</label><select id="xFrom"><option value="Custody">من العهدة</option><option value="Employee">من جيبي (هسترده)</option></select></div>
@@ -352,12 +356,19 @@ $('xSup').onchange = () => { $('xNew').hidden = $('xSup').value !== '__new'; };
 function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
   $('xJob').textContent = j.jobNo + ' — ' + j.client; $('xCar').textContent = j.car + (j.plate ? ' · ' + j.plate : '');
   ['xItem','xCost','xNoRec','xNote','xNsName','xNsPhone'].forEach(i => $(i).value = ''); $('xQty').value = '1'; $('xCat').value = 'Parts';
-  $('xPhoto').value = ''; $('xPrev').hidden = true; $('xFromBox').hidden = true; $('xMsg').textContent = '';
+  $('xPhoto').value = ''; $('xPrev').hidden = true; $('xFromBox').hidden = true; $('xMsg').textContent = ''; $('xMore').textContent = ''; xTot();
+  const L = $('xDoneL'); L.innerHTML = '<li class="muted">بيحمّل…</li>';
+  ops('jobExps', j.jobNo).then(r => { L.textContent = ''; if (!r.length) { L.innerHTML = '<li class="muted">لسه مفيش مصاريف متسجلة على العربية دي</li>'; return; }
+    let t = 0; r.forEach(e => { t += e.cost; const li = document.createElement('li'); li.style.cssText = 'display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:14px';
+      const a = document.createElement('span'); a.textContent = e.date.slice(5).split('-').reverse().join('/') + ' · ' + e.item + (e.qty > 1 ? ' × ' + e.qty : '') + (e.supplier ? ' · ' + e.supplier : '') + ' · ' + e.pay + ' · ' + e.by;
+      const b = document.createElement('b'); b.textContent = Number(e.cost).toLocaleString('en-US'); li.append(a, b); L.append(li); });
+    const li = document.createElement('li'); li.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid var(--line);font-weight:700'; li.innerHTML = '<span>الإجمالي (' + r.length + ' بند)</span><span>' + t.toLocaleString('en-US') + '</span>'; L.append(li); })
+   .catch(() => { L.innerHTML = '<li class="muted">ما قدرتش أجيب المصاريف — جرّب تاني</li>'; });
   document.querySelectorAll('#xPay button').forEach(b => b.className = ''); xFillSup();
   const k = $('xJK'); k.textContent = ''; [['parts','🔩 قطع غيار / ورشة / حاجة من مورد']].concat(XJC.map(x => [x.key, ({fuel:'⛽ ',transport:'🚕 ',test:'🧪 ',food:'🍽 '}[x.key]||'') + x.label + (x.internal ? ' (علينا)' : ' (على العميل)')]))
     .forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; k.append(op); }); k.value = 'parts'; xJKSync(); xView('form'); }
 function xJKSync(){ const quick = $('xJK').value !== 'parts';
-  ['xPartsA','xPartsB','xPartsC','xQtyBox'].forEach(i => $(i).hidden = quick);
+  ['xPartsA','xPartsB','xPartsC','xQtyBox','xMore','xAddLine','xTot'].forEach(i => $(i).hidden = quick);
   $('xNoRec').parentNode.querySelector('label[for=xNoRec]').hidden = quick; $('xNoRec').hidden = quick;
   const internal = ['test','food'].includes($('xJK').value);
   $('xPhoto').hidden = internal; $('xPhoto').parentNode.querySelector('label[for=xPhoto]').hidden = internal; if (internal) { $('xPhoto').value = ''; XREC = null; $('xPrev').hidden = true; }
@@ -365,6 +376,17 @@ function xJKSync(){ const quick = $('xJK').value !== 'parts';
     test: 'مشوار زيادة أو تجربة — علينا إحنا، مش بيطلع للعميل ولا على Asana.', food: 'أكل وقت الشغل على العربية دي — علينا إحنا، مش بيطلع للعميل ولا على Asana.' }[$('xJK').value] || '';
   if (quick) { XPAY = 'Cash'; $('xFromBox').hidden = false; document.querySelectorAll('#xPay button').forEach(x => x.className = x.dataset.v === 'Cash' ? 'on' : ''); } }
 $('xJK').onchange = xJKSync;
+/* more lines from the same supplier */
+function xLines(){ const out = [{ item: $('xItem').value.trim(), qty: $('xQty').value, cost: $('xCost').value.trim(), cat: $('xCat').value }];
+  document.querySelectorAll('#xMore .xl').forEach(r => out.push({ item: r.querySelector('.li').value.trim(), qty: r.querySelector('.lq').value, cost: r.querySelector('.lc').value.trim(), cat: r.querySelector('.lt').value }));
+  return out.filter((l, i) => i === 0 || l.item || l.cost); }
+function xTot(){ const ls = xLines(); const t = ls.reduce((s, l) => s + (Number(l.cost) || 0), 0); $('xTot').textContent = ls.length > 1 ? 'الإجمالي: ' + t.toLocaleString('en-US') + ' (' + ls.length + ' بنود)' : ''; }
+$('xAddLine').onclick = () => { const n = $('xMore').children.length + 2, r = document.createElement('div'); r.className = 'xl'; r.style.cssText = 'border-top:1px dashed var(--line);margin-top:10px;padding-top:6px';
+  r.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">بند ' + n + '</b><button type="button" class="link" style="color:var(--bad)">شيل ✕</button></div>' +
+    '<input class="li" placeholder="البند"><div class="row2"><div><label>المبلغ</label><input class="lc" inputmode="decimal"></div><div><label>العدد</label><input class="lq" inputmode="numeric" value="1"></div></div>' +
+    '<select class="lt" style="margin-top:6px"><option value="Parts">قطع غيار</option><option value="Labour">مصنعية</option><option value="Other">أخرى</option></select>';
+  r.querySelector('.lt').value = $('xCat').value; r.querySelector('button').onclick = () => { r.remove(); xTot(); }; r.addEventListener('input', xTot); $('xMore').append(r); r.querySelector('.li').focus(); };
+['xItem','xCost'].forEach(i => $(i).addEventListener('input', xTot));
 function shrink(f, done){ const img = new Image(), url = URL.createObjectURL(f);
   img.onload = () => { const k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
     c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
@@ -425,16 +447,17 @@ $('xSave').onclick = async () => {
       const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل على ' + no; }
     catch(e) { err(clean(e.message)); }
     $('xSave').disabled = false; return; }
-  if (!item) return err('اكتب البند'); if (!(Number(cost) > 0)) return err('اكتب المبلغ');
+  const lines = xLines(); for (let i = 0; i < lines.length; i++) { if (!lines[i].item) return err((lines.length > 1 ? 'بند ' + (i + 1) + ': ' : '') + 'اكتب البند'); if (!(Number(lines[i].cost) > 0)) return err((lines.length > 1 ? 'بند ' + (i + 1) + ': ' : '') + 'اكتب المبلغ'); }
   if (!XPAY) return err('اختار كاش ولا أجل'); if (!sup) return err('اختار المورد');
   if (sup === '__new' && (!$('xNsName').value.trim() || $('xNsPhone').value.replace(/\D/g,'').length < 8)) return err('اكتب اسم المورد الجديد ورقم تليفونه');
   if (!XREC && !$('xNoRec').value.trim()) return err('صوّر الإيصال، أو اكتب ليه مفيش إيصال');
   $('xSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
   try {
     if (sup === '__new') { XSUPS = await ops('supplierAdd', {name: $('xNsName').value.trim(), phone: $('xNsPhone').value, type: 'قطع غيار'}); sup = $('xNsName').value.trim(); }
-    await ops('addExpense', {jobNo: XCUR.jobNo, item, cat: $('xCat').value, cost, qty: $('xQty').value, pay: XPAY, from: $('xFrom').value, supplier: sup,
-      note: $('xNote').value.trim(), receipt: XREC, noReceipt: XREC ? '' : $('xNoRec').value.trim()});
-    const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل المصروف على ' + no + ' ونزل على Asana';
+    const common = {jobNo: XCUR.jobNo, pay: XPAY, from: $('xFrom').value, supplier: sup, note: $('xNote').value.trim(), receipt: XREC, noReceipt: XREC ? '' : $('xNoRec').value.trim()};
+    if (lines.length > 1) await ops('addExpenses', Object.assign({lines}, common));
+    else await ops('addExpense', Object.assign({item, cat: $('xCat').value, cost, qty: $('xQty').value}, common));
+    const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل' + (lines.length > 1 ? ' ' + lines.length + ' بنود' : ' المصروف') + ' على ' + no + ' ونزل على Asana';
   } catch(e) { err(clean(e.message)); }
   $('xSave').disabled = false;
 };
