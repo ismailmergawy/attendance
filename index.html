@@ -40,7 +40,7 @@ li:last-child{border-bottom:0}
 .pill{font-size:12px;font-weight:600;border-radius:999px;padding:0 10px;border:1px solid currentColor;white-space:nowrap}
 .Pending{color:var(--accent)}.Approved{color:var(--in)}.Rejected{color:var(--warn)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
 .tabs button{border:0;border-radius:9px;padding:10px;background:none;color:var(--muted);font-weight:600}
 .tabs button.on{background:var(--accent);color:#fff}
 .job{cursor:pointer}.job b{display:block}.job .go{color:var(--accent);font-weight:600;font-size:14px;margin-top:4px}
@@ -48,6 +48,14 @@ li:last-child{border-bottom:0}
 .seg button.on{background:var(--out);color:#fff;border-color:var(--out)}
 .ok{color:var(--in)}
 [hidden]{display:none!important}
+.stp{display:grid;gap:3px;margin-top:10px}.stp div{font-size:9.5px;line-height:1.3;overflow-wrap:anywhere;text-align:center;padding-top:6px;border-top:3px solid var(--line);color:var(--muted)}.stp .done{border-color:var(--in)}.stp .cur{border-color:var(--accent);color:var(--fg);font-weight:600}
+.cpill{font-size:12px;font-weight:600;border-radius:999px;padding:1px 10px;background:var(--bg);border:1px solid var(--line);white-space:nowrap}
+.next{color:var(--accent);font-weight:600;font-size:14px;margin-top:6px}
+.chk{padding:10px 0;border-top:1px solid var(--line)}.chk b{display:block;font-size:14px;margin-bottom:6px}.chk input{margin-top:6px}
+.chk .seg button.ok{background:var(--in);border-color:var(--in);color:#fff}.chk .seg button.issue,.chk .seg button.fix{background:var(--warn);border-color:var(--warn);color:#fff}.chk .seg button.good{background:var(--in);border-color:var(--in);color:#fff}.chk .seg button.fair{background:var(--accent);border-color:var(--accent);color:#fff}
+.grp{font-family:var(--display);font-size:14px;margin:14px 0 2px;color:var(--accent)}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--fg)}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.acts .btn{margin-top:8px}
 </style>
 </head>
 <body>
@@ -65,7 +73,7 @@ li:last-child{border-bottom:0}
   </section>
 
   <!-- Main -->
-  <div class="tabs" id="tabs" hidden><button id="tAtt" class="on">⏱ الحضور</button><button id="tExp">💸 المصاريف</button></div>
+  <div class="tabs" id="tabs" hidden><button id="tAtt" class="on">⏱ الحضور</button><button id="tCar" hidden>🚗 العربيات</button><button id="tExp">💸 المصاريف</button></div>
 
   <!-- Expenses (go to the Operations system) -->
   <section id="exp" hidden style="display:flex;flex-direction:column;gap:14px">
@@ -128,6 +136,47 @@ li:last-child{border-bottom:0}
         <button class="btn" id="xSave">حفظ المصروف</button>
         <div class="msg" id="xMsg"></div>
       </div>
+    </div>
+  </section>
+
+
+  <!-- Cars: the work steps (reception, inspection, estimate, QC, delivery) — same data as the Operations system -->
+  <section id="car" hidden style="display:flex;flex-direction:column;gap:14px">
+    <div id="cList" style="display:flex;flex-direction:column;gap:10px">
+      <div class="top"><h1>العربيات اللي عندنا</h1><button class="link" id="cReload">↻ تحديث</button></div>
+      <div class="msg" id="cMsg"></div>
+      <div id="cJobs" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+    <div id="cJob" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="top"><button class="link" id="cJobBack">→ كل العربيات</button><button class="link" id="cJobReload">↻</button></div>
+      <div class="card"><div class="top"><div><h1 id="cjClient"></h1><div class="muted" id="cjCar"></div></div><span id="cjPill"></span></div><div class="stp" id="cjSteps"></div></div>
+      <div class="msg" id="cjMsg"></div>
+      <div class="card" id="cjNow"></div>
+      <div class="card" id="cjTrip" hidden></div>
+      <div class="card" id="cjEst" hidden><h2>بنود المقايسة اللي العميل وافق عليها</h2><ul id="cjItems"></ul></div>
+    </div>
+    <div id="cChk" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="top"><h1 id="ckTitle"></h1><button class="link cBack">رجوع</button></div>
+      <div class="card"><b id="ckJob"></b><div class="muted" id="ckCar"></div></div>
+      <div class="card" id="ckTop"></div>
+      <div class="card" id="ckItemsCard"><div id="ckItems"></div></div>
+      <div class="card"><label for="ckFind" id="ckFindLbl" style="margin-top:0">ملاحظات</label><textarea id="ckFind"></textarea>
+        <label for="ckPhotos">📷 صور (لو حابب) — صوّر أو اختار من الصور</label><input id="ckPhotos" type="file" accept="image/*" multiple><div class="muted" id="ckPhN"></div></div>
+      <button class="btn" id="ckSave">حفظ</button>
+      <div class="msg" id="ckMsg"></div>
+    </div>
+    <div id="cEst" hidden style="display:flex;flex-direction:column;gap:12px">
+      <div class="top"><h1 id="ceTitle">المقايسة</h1><button class="link cBack">رجوع</button></div>
+      <div class="card"><b id="ceJob"></b><div class="muted" id="ceCar"></div></div>
+      <div class="card"><h2>البنود</h2><ul id="ceList"></ul></div>
+      <div class="card"><h2>بند جديد</h2>
+        <label for="ceItem">البند</label><input id="ceItem" placeholder="مثلاً: تيل فرامل أمامي">
+        <div class="row2"><div><label for="ceCat">النوع</label><select id="ceCat"><option value="Parts">قطع غيار</option><option value="Labour">مصنعية</option><option value="Other">أخرى</option></select></div>
+          <div><label for="ceQty">العدد</label><input id="ceQty" inputmode="numeric" value="1"></div></div>
+        <label for="ceCost">سعر السوق (إجمالي البند)</label><input id="ceCost" inputmode="decimal">
+        <button class="btn ghost" id="ceAdd">+ إضافة البند</button></div>
+      <button class="btn" id="ceSend">إرسال المقايسة لإسماعيل</button>
+      <div class="msg" id="ceMsg"></div>
     </div>
   </section>
 
@@ -222,7 +271,7 @@ async function call(fn, ...args){
 function getPin(){ try { return localStorage.getItem('lvms_pin'); } catch(e){ return null; } }
 function savePin(p){ try { p ? localStorage.setItem('lvms_pin', p) : localStorage.removeItem('lvms_pin'); } catch(e){} }
 let TAB = 'att';
-function show(id){ $('login').hidden = id !== 'login'; $('tabs').hidden = id === 'login'; $('main').hidden = id !== 'main' || TAB !== 'att'; $('exp').hidden = id !== 'main' || TAB !== 'exp'; }
+function show(id){ $('login').hidden = id !== 'login'; $('tabs').hidden = id === 'login'; $('main').hidden = id !== 'main' || TAB !== 'att'; $('exp').hidden = id !== 'main' || TAB !== 'exp'; $('car').hidden = id !== 'main' || TAB !== 'car'; }
 function clean(m){ return String(m||'').replace(/^Error:\s*/, '').replace(/^Exception:\s*/, ''); }
 
 function tick(){ const n = new Date();
@@ -236,7 +285,7 @@ async function load(){
   try {
     const s = await call('empState', PIN);
     show('main');
-    $('who').textContent = s.name;
+    $('who').textContent = s.name; cProbe();
     const b = $('act'); b.className = 'act ' + s.next; b.textContent = s.next === 'in' ? 'Check-in' : 'Check-out'; b.disabled = false;
     $('sIn').textContent = t12(s.today.firstIn) || '—';
     $('sOut').textContent = t12(s.today.lastOut) || '—';
@@ -271,7 +320,7 @@ $('npSave').onclick = async () => {
   catch (e) { err(clean(e.message)); }
   $('npSave').disabled = false;
 };
-$('logout').onclick = () => { savePin(null); PIN = null; $('pin').value = ''; show('login'); };
+$('logout').onclick = () => { savePin(null); PIN = null; CPROBED = false; $('tCar').hidden = true; tab('att'); $('pin').value = ''; show('login'); };
 
 function getLoc(){
   return new Promise(res => {
@@ -329,8 +378,8 @@ async function ops(fn, ...args){
   const j = await r.json(); if (!j.ok) throw new Error(j.error); return j.data;
 }
 let XJOBS = [], XSUPS = [], XCUR = null, XPAY = '', XREC = null, XPETTY = [], PREC = null, XJC = [], XDEALS = null, DREC = null;
-function tab(t){ TAB = t; $('tAtt').className = t === 'att' ? 'on' : ''; $('tExp').className = t === 'exp' ? 'on' : ''; show('main'); if (t === 'exp') xLoad(); }
-$('tAtt').onclick = () => tab('att'); $('tExp').onclick = () => tab('exp');
+function tab(t){ TAB = t; $('tAtt').className = t === 'att' ? 'on' : ''; $('tExp').className = t === 'exp' ? 'on' : ''; $('tCar').className = t === 'car' ? 'on' : ''; show('main'); if (t === 'exp') xLoad(); if (t === 'car') cLoad(); }
+$('tAtt').onclick = () => tab('att'); $('tExp').onclick = () => tab('exp'); $('tCar').onclick = () => tab('car');
 function xView(v){ $('xList').hidden = v !== 'list'; $('xForm').hidden = v !== 'form'; window.scrollTo(0,0); }
 async function xLoad(){
   xView('list'); $('xListMsg').className = 'msg'; if (!XJOBS.length) $('xListMsg').textContent = 'بيحمّل…';
@@ -461,6 +510,150 @@ $('xSave').onclick = async () => {
   } catch(e) { err(clean(e.message)); }
   $('xSave').disabled = false;
 };
+
+/* ---------- cars: the work steps, so the team works from this one page ---------- */
+let CJOBS = [], CCUR = null, CPHASE = 1, CPROBED = false, CME = null, CFORM = null, CFKEY = '', CPH = [];
+const CSL = {Request:'طلب جديد',Received:'اتستلمت',Inspected:'اتفحصت',Estimate:'مقايسة',ClientApproved:'العميل وافق',Working:'تشغيل',QC:'فحص بعد الإصلاح',Invoice:'فاتورة',Delivered:'اتسلمت',Paid:'اتحصلت'};
+const CSHORT = {Request:'وصول',Received:'استلام',Inspected:'فحص',Estimate:'مقايسة',ClientApproved:'موافقة',Working:'تشغيل',QC:'مراجعة',Invoice:'فاتورة',Delivered:'تسليم',Paid:'تحصيل'};
+const L2 = [['ok','تمام'],['issue','فيه ملاحظة']], L3 = [['good','جيد'],['fair','مقبول'],['fix','يحتاج إصلاح']];
+const INSP = [['المحرك',['صوت المحرك','تسريب زيت','سير الموتور','الرادياتير والخراطيم','مستوى الزيت','مياه التبريد']],['الفرامل',['تيل أمامي','تيل خلفي','الطنابير / الديسكات','زيت الفرامل']],
+  ['العفشة والدركسيون',['مساعدين أمامي','مساعدين خلفي','المقصات والجلب','بلي العجل','الدركسيون']],['الكاوتش',['كاوتش أمامي','كاوتش خلفي','الاستبن','ضغط الهواء']],
+  ['الكهرباء',['البطارية','الإضاءة الأمامية والخلفية','لمبات التابلوه','الشاشة والأزرار']],['التكييف',['التبريد','فلتر التكييف']],['الفتيس',['نقل السرعات','تسريب الفتيس']],
+  ['البودي والزجاج',['الزجاج والمرايات','المساحات','الأبواب والكوالين']],['التجربة',['Road test','OBD scan']]];
+const CFORMS = {
+  Reception:{title:'استلام العربية', km:true, fuel:true, complaint:true, levels:L2, groups:[['وقت الاستلام',['خدوش أو خبطات موجودة','لمبات التابلوه','الاستبن والعدة','حاجات شخصية في العربية']]], find:'ملاحظات الاستلام', ok:'اتحفظ الاستلام'},
+  Inspection:{title:'فحص العربية', levels:L3, groups:INSP, find:'ملاحظات الفحص (كل حاجة لاحظتها)', ok:'اتحفظ الفحص', need:'fix'},
+  QC:{title:'فحص بعد الإصلاح', levels:L2, groups:null, find:'ملاحظات', ok:'اتحفظ الفحص بعد الإصلاح'},
+  Delivery:{title:'تسليم العربية', km:true, receivedBy:true, levels:L2, groups:[['وقت التسليم',['العربية نضيفة','الحاجات الشخصية رجعت']]], find:'ملاحظات التسليم', ok:'اتسجل التسليم'}};
+function el(t, txt, cls){ const e = document.createElement(t); if (txt !== undefined && txt !== null) e.textContent = txt; if (cls) e.className = cls; return e; }
+function cbtn(txt, cls, fn){ const b = el('button', txt, 'btn ' + (cls || '')); b.type = 'button'; b.onclick = fn; return b; }
+function csay(id, t, bad){ $(id).textContent = t || ''; $(id).className = 'msg' + (bad ? ' err' : t ? ' ok' : ''); }
+function cView(v){ ['cList','cJob','cChk','cEst'].forEach(x => $(x).hidden = x !== v); window.scrollTo(0,0); }
+function money(n){ return Number(n || 0).toLocaleString('en-US', {maximumFractionDigits:2}); }
+async function cProbe(){ if (CPROBED) return; CPROBED = true;
+  try { const r = await ops('staffHome'); CPHASE = r.phase || 1; CJOBS = r.jobs; $('tCar').hidden = CPHASE === 1; } catch(e){ CPROBED = false; } }
+async function cLoad(){ cView('cList'); if (!CJOBS.length) csay('cMsg', 'بيحمّل…');
+  try { const r = await ops('staffHome'); CJOBS = r.jobs; CPHASE = r.phase || 1; csay('cMsg', ''); cRender(); return r; } catch(e){ csay('cMsg', clean(e.message), true); } }
+$('cReload').onclick = () => cLoad();
+function cNext(j){
+  if (j.status === 'Request') return ['استلام العربية', () => cCheck(j, 'Reception')];
+  if (j.status === 'Received') return j.type === 'Quick' ? ['مستني الفاتورة من المكتب'] : ['فحص العربية', () => cCheck(j, 'Inspection')];
+  if (j.status === 'Inspected') return [j.draft ? 'كمّل المقايسة (' + j.draft + ')' : 'اكتب المقايسة', () => cEstOpen(j)];
+  if (j.status === 'Estimate') return ['المقايسة عند إسماعيل / مستنية موافقة العميل'];
+  if (j.status === 'ClientApproved') return ['العميل وافق — ابدأ الشغل', async () => { try { await ops('startWork', j.jobNo); await cRefresh(j.jobNo, 'بدأ الشغل — ' + j.jobNo); } catch(e){ csay('cjMsg', clean(e.message), true); } }];
+  if (j.status === 'Working') return ['خلص الإصلاح ← فحص بعد الإصلاح', () => cCheck(j, 'QC')];
+  if (j.status === 'QC') return ['مستني الفاتورة من المكتب'];
+  if (j.status === 'Invoice') return j.inv === 'Approved' ? ['تسليم العربية', () => cCheck(j, 'Delivery')] : ['الفاتورة بتتعمل — استنى قبل التسليم'];
+  return [''];
+}
+function fmtDT(d){ if (!d) return ''; d = String(d).replace('T', ' '); const t = new Date(d.replace(' ', 'T')); if (isNaN(t)) return d;
+  const days = ['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'], h = t.getHours(), m = ('0' + t.getMinutes()).slice(-2);
+  return days[t.getDay()] + ' ' + t.getDate() + '/' + (t.getMonth() + 1) + (d.length > 10 ? ' ' + ((h % 12) || 12) + ':' + m + (h < 12 ? ' ص' : ' م') : ''); }
+function cRender(){ const box = $('cJobs'); box.textContent = '';
+  if (!CJOBS.length) { box.append(el('div', 'مفيش عربيات عندكم دلوقتي.', 'muted')); return; }
+  CJOBS.forEach(j => { const c = el('div', null, 'card job'), h = el('div', null, 'top'), t = el('div');
+    t.append(el('b', j.client), el('div', j.car + (j.plate ? ' · ' + j.plate : ''), 'muted')); h.append(t, el('span', CSL[j.status] || j.status, 'cpill'));
+    const n = cNext(j); c.append(h, el('div', (n[1] ? '➜ ' : '⏳ ') + n[0], 'next'));
+    if (j.status === 'Request' && (j.pickupAt || j.pickupAddr)) c.append(el('div', '📍 استلام ' + [j.pickupAt ? fmtDT(j.pickupAt) : '', j.pickupAddr].filter(Boolean).join(' · '), 'muted'));
+    if (j.due && j.due.dueAt) { const dd = el('div', '⏰ التسليم للعميل: ' + fmtDT(j.due.dueAt) + (j.due.late ? ' — متأخرة' : ''), 'muted'); if (j.due.late) dd.style.color = 'var(--warn)'; c.append(dd); }
+    c.onclick = () => cOpen(j.jobNo); box.append(c); }); }
+function cOpen(no){ const j = CJOBS.find(x => x.jobNo === no); if (!j) { CCUR = null; cView('cList'); cRender(); return; }
+  CCUR = j; csay('cjMsg', '');
+  $('cjClient').textContent = j.client; $('cjCar').textContent = j.jobNo + ' · ' + j.car + (j.plate ? ' · ' + j.plate : '');
+  $('cjPill').textContent = ''; $('cjPill').append(el('span', CSL[j.status] || j.status, 'cpill'));
+  const S = $('cjSteps'); S.textContent = ''; S.style.gridTemplateColumns = 'repeat(' + j.path.length + ',minmax(0,1fr))'; const idx = j.path.indexOf(j.status);
+  j.path.forEach((x, i) => S.append(el('div', CSHORT[x] || x, i < idx ? 'done' : i === idx ? 'cur' : '')));
+  const N = $('cjNow'); N.textContent = ''; const n = cNext(j);
+  if (n[1]) N.append(cbtn(n[0], '', n[1])); else N.append(el('div', n[0], 'muted'));
+  const a = el('div', null, 'acts'); a.append(cbtn('+ مصروف', 'ghost', async () => { TAB = 'exp'; $('tAtt').className = ''; $('tCar').className = ''; $('tExp').className = 'on'; show('main'); await xLoad(); const x = XJOBS.find(y => y.jobNo === j.jobNo) || j; xOpen(x); }));
+  if (j.status === 'Working' || j.status === 'ClientApproved') a.append(cbtn('+ مقايسة إضافية', 'ghost', () => cEstOpen(j))); else a.style.gridTemplateColumns = '1fr';
+  N.append(a); cTrip(j);
+  const I = $('cjItems'); I.textContent = ''; $('cjEst').hidden = !j.items.length;
+  j.items.forEach(x => { const li = el('li'); li.append(el('span', x.item), el('span', x.qty > 1 ? '× ' + x.qty : '', 'muted')); I.append(li); });
+  cView('cJob'); }
+async function cRefresh(no, msg){ await cLoad(); cOpen(no); if (msg && CCUR) csay('cjMsg', msg); else if (msg) csay('cMsg', msg); }
+$('cJobBack').onclick = () => { CCUR = null; cLoad(); };
+$('cJobReload').onclick = () => cRefresh(CCUR.jobNo);
+document.querySelectorAll('.cBack').forEach(b => b.onclick = () => CCUR ? cOpen(CCUR.jobNo) : cView('cList'));
+function waNum(p){ p = String(p || '').replace(/[^\d]/g, ''); if (/^01\d{9}$/.test(p)) p = '2' + p; else if (/^1\d{9}$/.test(p)) p = '20' + p; return p; }
+function cTrip(j){ const T = $('cjTrip'); T.textContent = '';
+  const leg = j.status === 'Request' ? 1 : (j.status === 'Invoice' && j.inv === 'Approved' ? 2 : 0);
+  if (!leg) { T.hidden = true; return; } T.hidden = false;
+  const addr = leg === 1 ? j.pickupAddr : (j.dropAddr || j.pickupAddr), map = leg === 1 ? j.pickupMap : (j.dropMap || (j.dropAddr ? '' : j.pickupMap));
+  T.append(el('h2', leg === 1 ? '📍 استلام العربية من العميل' : '📍 تسليم العربية للعميل'));
+  if (leg === 1 && j.pickupAt) T.append(el('div', 'المعاد: ' + fmtDT(j.pickupAt)));
+  if (leg === 2 && j.due && j.due.dueAt) T.append(el('div', 'معاد التسليم: ' + fmtDT(j.due.dueAt)));
+  T.append(el('div', addr || 'المكان مش متسجل — اسأل المكتب', addr ? '' : 'muted'));
+  const u = map || (addr ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr) : '');
+  const ppl = []; if (j.contact && j.contact.phone) ppl.push([j.contact.phone, j.contact.name]); if (j.phone) ppl.push([j.phone, j.client]);
+  const who = el('select'); ppl.forEach(x => { const o = el('option', 'لـ ' + x[1] + ' — ' + x[0]); o.value = x[0]; o.dataset.name = x[1]; who.append(o); });
+  const eta = el('select'); [10,15,20,30,45,60,90].forEach(m => { const o = el('option', 'هوصل خلال ' + m + ' دقيقة'); o.value = m; eta.append(o); }); eta.value = '20';
+  const done = j.trips || {}, k1 = 'onway' + leg, k2 = 'arrived' + leg, car = j.car + (j.plate ? ' (' + j.plate + ')' : ''), me = $('who').textContent || '';
+  function send(kind){ const o = who.options[who.selectedIndex]; if (!o) { csay('cjMsg', 'رقم العميل مش متسجل — كلّم المكتب', true); return; }
+    const nm = o.dataset.name || ''; const txt = kind === k1 ? 'أهلاً ' + nm + '، معاك ' + me + ' من Luxury VMS. أنا في الطريق لحضرتك ' + (leg === 1 ? 'لاستلام العربية ' : 'بالعربية ') + car + (leg === 2 ? ' بعد الصيانة' : '') + '، هوصل خلال حوالي ' + eta.value + ' دقيقة.'
+      : 'أهلاً ' + nm + '، أنا ' + me + ' من Luxury VMS. ' + (leg === 1 ? 'وصلت مكان الاستلام عشان أستلم العربية ' + car + '.' : 'وصلت بالعربية ' + car + '، في انتظار حضرتك للتسليم.');
+    window.open('https://wa.me/' + waNum(o.value) + '?text=' + encodeURIComponent(txt), '_blank');
+    ops('trip', j.jobNo, kind, kind === k1 ? eta.value + ' دقيقة' : '').then(() => { (j.trips = j.trips || {})[kind] = {at:'دلوقتي'}; cTrip(j); }).catch(e => csay('cjMsg', clean(e.message), true)); }
+  if (ppl.length > 1) T.append(who); else if (ppl.length) T.append(el('div', 'الرسالة هتروح لـ ' + ppl[0][1] + ' — ' + ppl[0][0], 'muted'));
+  if (!done[k1]) T.append(eta);
+  const a = el('div', null, 'acts');
+  a.append(cbtn((done[k1] ? '✓ ' : '') + '🚗 أنا في الطريق', done[k1] ? 'ghost' : '', () => send(k1)), cbtn((done[k2] ? '✓ ' : '') + '📍 وصلت', done[k1] && !done[k2] ? '' : 'ghost', () => send(k2)));
+  T.append(a);
+  if (u) { const b = el('a', '🗺 افتح الخريطة', 'btn ghost'); b.href = u; b.target = '_blank'; b.style.cssText = 'display:block;text-align:center;text-decoration:none'; T.append(b); }
+  T.append(el('div', 'الرسالة بتتفتح على WhatsApp جاهزة — دوس إرسال. وبيتسجل للمكتب إنك اتحركت/وصلت.', 'muted')); }
+/* checks */
+function cSeg(d, note, levels, need){ const seg = el('div', null, 'seg');
+  levels.forEach(o => { const b = el('button', o[1]); b.type = 'button';
+    b.onclick = () => { d.dataset.s = o[0]; seg.querySelectorAll('button').forEach(x => x.className = ''); b.className = 'on ' + o[0]; const showN = o[0] !== 'ok' && o[0] !== 'good'; note.hidden = !showN; note.placeholder = o[0] === need ? 'إيه اللي محتاج يتصلح؟ (إجباري)' : 'الملاحظة'; if (showN) note.focus(); };
+    seg.append(b); }); return seg; }
+function cCheck(j, key){ CCUR = j; CFKEY = key; CFORM = CFORMS[key]; CPH = []; $('ckPhotos').value = ''; $('ckPhN').textContent = '';
+  $('ckTitle').textContent = CFORM.title; $('ckJob').textContent = j.jobNo + ' — ' + j.client; $('ckCar').textContent = j.car + (j.plate ? ' · ' + j.plate : '');
+  const T = $('ckTop'); T.textContent = ''; T.hidden = !(CFORM.km || CFORM.complaint || CFORM.receivedBy);
+  const field = (lbl, inp) => { const w = el('div'), l = el('label', lbl); l.htmlFor = inp.id; w.append(l, inp); return w; };
+  if (CFORM.km) { const g = el('div', null, 'row2'), km = el('input'); km.id = 'ckKm'; km.inputMode = 'numeric'; g.append(field('الكيلومترات', km));
+    if (CFORM.fuel) { const f = el('select'); f.id = 'ckFuel'; ['فاضي','1/4','1/2','3/4','مليان'].forEach(x => { const o = el('option', x); if (x === '1/2') o.selected = true; f.append(o); }); g.append(field('البنزين', f)); }
+    T.append(g); }
+  if (CFORM.complaint) { const c = el('textarea'); c.id = 'ckComp'; T.append(field('شكوى / طلبات العميل', c)); }
+  if (CFORM.receivedBy) { const r = el('input'); r.id = 'ckRecBy'; r.placeholder = 'العميل نفسه / السواق / …'; T.append(field('اتسلمت لمين؟', r)); }
+  const groups = CFORM.groups || [['الشغل اللي اتعمل', j.items.map(i => i.item)], ['مراجعات أساسية', ['مياه المساحات','ضغط الكاوتش والاستبن','نظافة العربية','مفيش لمبات في التابلوه','Road test بعد الإصلاح']], ['مراجعة ملاحظات الاستلام والفحص', j.review || []]];
+  const box = $('ckItems'); box.textContent = '';
+  groups.forEach(g => { if (!g[1].length) return; box.append(el('div', g[0], 'grp'));
+    g[1].forEach(name => { const d = el('div', null, 'chk'); d.dataset.name = (CFORM.groups ? '' : g[0] === 'الشغل اللي اتعمل' ? '' : 'مراجعة: ') + name; d.dataset.s = '';
+      const note = el('input'); note.hidden = true; note.setAttribute('aria-label', 'ملاحظة ' + name);
+      d.append(el('b', name), cSeg(d, note, CFORM.levels, CFORM.need), note); box.append(d); }); });
+  $('ckFindLbl').textContent = CFORM.find; $('ckFind').value = ''; csay('ckMsg', ''); cView('cChk'); }
+$('ckPhotos').onchange = function(){ CPH = []; const fs = [...(this.files || [])].slice(0, 8); $('ckPhN').textContent = fs.length ? 'بيجهّز ' + fs.length + ' صورة…' : '';
+  let n = 0; fs.forEach(f => shrink(f, d => { CPH.push(d); n++; if (n === fs.length) $('ckPhN').textContent = '✓ ' + fs.length + ' صورة جاهزة'; })); };
+$('ckSave').onclick = async function(){
+  const items = {}; let missing = 0, noNote = 0;
+  $('ckItems').querySelectorAll('.chk').forEach(d => { if (!d.dataset.s) { missing++; return; } const n = d.querySelector('input').value.trim();
+    if (CFORM.need && d.dataset.s === CFORM.need && !n) noNote++; items[d.dataset.name] = {s: d.dataset.s, n}; });
+  if (CFORM.km && !$('ckKm').value) return csay('ckMsg', 'اكتب الكيلومترات', true);
+  if (CFORM.receivedBy && !$('ckRecBy').value.trim()) return csay('ckMsg', 'اكتب العربية اتسلمت لمين', true);
+  if (missing) return csay('ckMsg', 'فاضل ' + missing + ' بند من غير اختيار', true);
+  if (noNote) return csay('ckMsg', 'اكتب إيه اللي محتاج يتصلح في ' + noNote + ' بند', true);
+  this.disabled = true; csay('ckMsg', 'بيحفظ…');
+  try { const rq = await ops('saveCheck', {jobNo: CCUR.jobNo, stage: CFKEY, km: CFORM.km ? $('ckKm').value : '', fuel: CFORM.fuel ? $('ckFuel').value : '', complaint: CFORM.complaint ? $('ckComp').value : '',
+      receivedBy: CFORM.receivedBy ? $('ckRecBy').value.trim() : '', findings: $('ckFind').value, items, photos: CPH});
+    await cRefresh(CCUR.jobNo, rq && rq.qcFail ? '❌ الفحص بعد الإصلاح رفض — ' + CCUR.jobNo + ' لازم يتصلّح ويتفحص تاني' : CFORM.ok + ' — ' + CCUR.jobNo); }
+  catch(e){ csay('ckMsg', clean(e.message), true); }
+  this.disabled = false; };
+/* estimate */
+async function cEstOpen(j){ CCUR = j; $('ceJob').textContent = j.jobNo + ' — ' + j.client; $('ceCar').textContent = j.car + (j.plate ? ' · ' + j.plate : '');
+  $('ceTitle').textContent = j.status === 'Inspected' ? 'المقايسة' : 'مقايسة إضافية'; ['ceItem','ceCost'].forEach(i => $(i).value = ''); $('ceQty').value = '1'; csay('ceMsg', '');
+  cView('cEst'); try { cEstRender(await ops('staffEstimate', j.jobNo)); } catch(e){ csay('ceMsg', clean(e.message), true); } }
+function cEstRender(r){ const ul = $('ceList'); ul.textContent = ''; const dr = r.lines.filter(l => l.status === 'Draft'), done = r.lines.filter(l => l.status !== 'Draft');
+  if (done.length) ul.append(el('li', done.length + ' بند اتبعتوا قبل كده', 'muted'));
+  if (!dr.length) ul.append(el('li', 'لسه مفيش بنود جديدة.', 'muted'));
+  dr.forEach(l => { const li = el('li'), a = el('span'); a.append(el('b', l.item), el('div', (l.cat === 'Labour' ? 'مصنعية' : l.cat === 'Other' ? 'أخرى' : 'قطع غيار') + ' · العدد ' + l.qty, 'muted'));
+    const r2 = el('span'); r2.style.cssText = 'display:flex;gap:8px;align-items:center'; r2.append(el('b', money(l.cost)));
+    const x = el('button', '✕', 'link'); x.type = 'button'; x.setAttribute('aria-label', 'مسح ' + l.item);
+    x.onclick = async () => { try { cEstRender(await ops('estimateDel', l.id, true)); } catch(e){ csay('ceMsg', clean(e.message), true); } }; r2.append(x); li.append(a, r2); ul.append(li); });
+  $('ceSend').disabled = !dr.length; }
+$('ceAdd').onclick = async function(){ const it = $('ceItem').value.trim(); if (!it) return csay('ceMsg', 'اكتب البند', true); if (!$('ceCost').value) return csay('ceMsg', 'اكتب سعر السوق', true);
+  this.disabled = true; try { cEstRender(await ops('estimateAdd', CCUR.jobNo, {item: it, cat: $('ceCat').value, qty: $('ceQty').value, cost: $('ceCost').value, staffView: true})); $('ceItem').value = ''; $('ceCost').value = ''; $('ceQty').value = '1'; csay('ceMsg', 'اتضاف'); $('ceItem').focus(); }
+  catch(e){ csay('ceMsg', clean(e.message), true); } this.disabled = false; };
+$('ceSend').onclick = async function(){ this.disabled = true; try { await ops('estimateSubmit', CCUR.jobNo, 0, true); await cRefresh(CCUR.jobNo, 'المقايسة اتبعتت لإسماعيل — ' + CCUR.jobNo); } catch(e){ csay('ceMsg', clean(e.message), true); } this.disabled = false; };
 
 PIN = getPin();
 if (PIN) load(); else show('login');
