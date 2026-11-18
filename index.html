@@ -597,8 +597,9 @@ function csay(id, t, bad){ $(id).textContent = t || ''; $(id).className = 'msg' 
 function cView(v){ ['cList','cJob','cChk','cEst'].forEach(x => $(x).hidden = x !== v); window.scrollTo(0,0); }
 function money(n){ return Number(n || 0).toLocaleString('en-US', {maximumFractionDigits:2}); }
 async function cProbe(){ if (CPROBED) return; CPROBED = true;
-  try { const r = await ops('staffHome'); CPHASE = r.phase || 1; CJOBS = r.jobs; $('tCar').hidden = CPHASE === 1; rBadge(r.rev); } catch(e){ CPROBED = false; } }
-async function cLoad(){ cView('cList'); if (!CJOBS.length) csay('cMsg', 'بيحمّل…');
+  try { const r = await ops('staffHome'); CPHASE = r.phase || 1; CJOBS = r.jobs; $('tCar').hidden = CPHASE === 1; rBadge(r.rev); bgPull(); } catch(e){ CPROBED = false; } }
+let BGP = 0; function bgPull(){ if (Date.now() - BGP < 180000) return; BGP = Date.now(); ops('bgPull').then(r => { if (r && r.added && TAB === 'car') cLoad(); }).catch(() => {}); }
+async function cLoad(){ bgPull(); cView('cList'); if (!CJOBS.length) csay('cMsg', 'بيحمّل…');
   try { const r = await ops('staffHome'); CJOBS = r.jobs; CPHASE = r.phase || 1; csay('cMsg', ''); cRender(); return r; } catch(e){ csay('cMsg', clean(e.message), true); } }
 $('cReload').onclick = () => cLoad();
 function cNext(j){
