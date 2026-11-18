@@ -73,7 +73,7 @@ li:last-child{border-bottom:0}
   </section>
 
   <!-- Main -->
-  <div class="tabs" id="tabs" hidden><button id="tAtt" class="on">⏱ الحضور</button><button id="tCar" hidden>🚗 العربيات</button><button id="tExp">💸 المصاريف</button></div>
+  <div class="tabs" id="tabs" hidden><button id="tAtt" class="on">⏱ الحضور</button><button id="tCar" hidden>🚗 العربيات</button><button id="tExp">💸 المصاريف</button><button id="tRev" hidden>🧾 مراجعة <span id="nRev"></span></button></div>
 
   <!-- Expenses (go to the Operations system) -->
   <section id="exp" hidden style="display:flex;flex-direction:column;gap:14px">
@@ -144,6 +144,13 @@ li:last-child{border-bottom:0}
 
 
   <!-- Cars: the work steps (reception, inspection, estimate, QC, delivery) — same data as the Operations system -->
+  <section id="rev" hidden style="display:flex;flex-direction:column;gap:12px">
+    <div class="top"><h1>🧾 مراجعة المصاريف</h1><button class="link" id="rReload">↻ تحديث</button></div>
+    <div class="muted" style="font-size:13px">راجع مصاريف النهارده قبل ما تمشي: صلّح الاسم أو المبلغ، وبعدين ✓ اعتمد.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="rF" style="flex:1;min-width:150px"><option value="flag">⚠️ محتاج تصليح</option><option value="clean">سليم ومستني اعتماد</option><option value="all">كل اللي مستني</option></select><button class="btn" id="rAll" type="button">✓ اعتمد كل السليم</button></div>
+    <div class="msg" id="rMsg"></div>
+    <div id="rList" style="display:flex;flex-direction:column;gap:10px"></div>
+  </section>
   <section id="car" hidden style="display:flex;flex-direction:column;gap:14px">
     <div id="cList" style="display:flex;flex-direction:column;gap:10px">
       <div class="top"><h1>العربيات اللي عندنا</h1><button class="link" id="cReload">↻ تحديث</button></div>
@@ -282,7 +289,7 @@ async function call(fn, ...args){
 function getPin(){ try { return localStorage.getItem('lvms_pin'); } catch(e){ return null; } }
 function savePin(p){ try { p ? localStorage.setItem('lvms_pin', p) : localStorage.removeItem('lvms_pin'); } catch(e){} }
 let TAB = 'att';
-function show(id){ $('login').hidden = id !== 'login'; $('tabs').hidden = id === 'login'; $('main').hidden = id !== 'main' || TAB !== 'att'; $('exp').hidden = id !== 'main' || TAB !== 'exp'; $('car').hidden = id !== 'main' || TAB !== 'car'; }
+function show(id){ $('login').hidden = id !== 'login'; $('tabs').hidden = id === 'login'; $('main').hidden = id !== 'main' || TAB !== 'att'; $('exp').hidden = id !== 'main' || TAB !== 'exp'; $('car').hidden = id !== 'main' || TAB !== 'car'; $('rev').hidden = id !== 'main' || TAB !== 'rev'; }
 function clean(m){ return String(m||'').replace(/^Error:\s*/, '').replace(/^Exception:\s*/, ''); }
 
 function tick(){ const n = new Date();
@@ -331,7 +338,7 @@ $('npSave').onclick = async () => {
   catch (e) { err(clean(e.message)); }
   $('npSave').disabled = false;
 };
-$('logout').onclick = () => { savePin(null); PIN = null; CPROBED = false; $('tCar').hidden = true; tab('att'); $('pin').value = ''; show('login'); };
+$('logout').onclick = () => { savePin(null); PIN = null; CPROBED = false; $('tCar').hidden = true; $('tRev').hidden = true; tab('att'); $('pin').value = ''; show('login'); };
 
 function getLoc(){
   return new Promise(res => {
@@ -411,8 +418,8 @@ async function ops(fn, ...args){
   const j = await r.json(); if (!j.ok) throw new Error(j.error); return j.data;
 }
 let XJOBS = [], XSUPS = [], XCUR = null, XPAY = '', XREC = null, XPETTY = [], PREC = null, XJC = [], XDEALS = null, DREC = null;
-function tab(t){ TAB = t; $('tAtt').className = t === 'att' ? 'on' : ''; $('tExp').className = t === 'exp' ? 'on' : ''; $('tCar').className = t === 'car' ? 'on' : ''; show('main'); if (t === 'exp') xLoad(); if (t === 'car') cLoad(); }
-$('tAtt').onclick = () => tab('att'); $('tExp').onclick = () => tab('exp'); $('tCar').onclick = () => tab('car');
+function tab(t){ TAB = t; $('tAtt').className = t === 'att' ? 'on' : ''; $('tExp').className = t === 'exp' ? 'on' : ''; $('tCar').className = t === 'car' ? 'on' : ''; $('tRev').className = t === 'rev' ? 'on' : ''; show('main'); if (t === 'rev') rLoad(); if (t === 'exp') xLoad(); if (t === 'car') cLoad(); }
+$('tAtt').onclick = () => tab('att'); $('tExp').onclick = () => tab('exp'); $('tCar').onclick = () => tab('car'); $('tRev').onclick = () => tab('rev');
 function xView(v){ $('xList').hidden = v !== 'list'; $('xForm').hidden = v !== 'form'; window.scrollTo(0,0); }
 async function xLoad(){
   xView('list'); $('xListMsg').className = 'msg'; if (!XJOBS.length) $('xListMsg').textContent = 'بيحمّل…';
@@ -590,7 +597,7 @@ function csay(id, t, bad){ $(id).textContent = t || ''; $(id).className = 'msg' 
 function cView(v){ ['cList','cJob','cChk','cEst'].forEach(x => $(x).hidden = x !== v); window.scrollTo(0,0); }
 function money(n){ return Number(n || 0).toLocaleString('en-US', {maximumFractionDigits:2}); }
 async function cProbe(){ if (CPROBED) return; CPROBED = true;
-  try { const r = await ops('staffHome'); CPHASE = r.phase || 1; CJOBS = r.jobs; $('tCar').hidden = CPHASE === 1; } catch(e){ CPROBED = false; } }
+  try { const r = await ops('staffHome'); CPHASE = r.phase || 1; CJOBS = r.jobs; $('tCar').hidden = CPHASE === 1; rBadge(r.rev); } catch(e){ CPROBED = false; } }
 async function cLoad(){ cView('cList'); if (!CJOBS.length) csay('cMsg', 'بيحمّل…');
   try { const r = await ops('staffHome'); CJOBS = r.jobs; CPHASE = r.phase || 1; csay('cMsg', ''); cRender(); return r; } catch(e){ csay('cMsg', clean(e.message), true); } }
 $('cReload').onclick = () => cLoad();
@@ -614,6 +621,47 @@ function cMoney(j){ const b = j.budget; if (!b) return null; const d = el('div',
     d.style.color = rem < 0 ? '#C0392B' : rem < b.cap * 0.2 ? 'var(--warn)' : ''; }
   else d.textContent = '💰 اتصرف ' + money(b.spent) + (j.canBudget ? ' — مفيش حد تكلفة لسه' : '');
   return d; }
+/* expense review (Owner / Ops) */
+let RV = null;
+function rBadge(n){ if (n === null || n === undefined) { $('tRev').hidden = true; return; } $('tRev').hidden = false; $('nRev').textContent = n ? '(' + n + ')' : ''; }
+async function rLoad(){ csay('rMsg', 'بيحمّل…'); try { RV = await ops('expReview', {}); rBadge(RV.count); csay('rMsg', ''); rRender(); } catch(e){ csay('rMsg', clean(e.message), true); } }
+$('rReload').onclick = () => rLoad(); $('rF').onchange = () => rRender();
+function rItems(){ const f = $('rF').value; return RV.list.filter(x => !x.test && (f === 'all' || (f === 'flag' ? x.flags.length : !x.flags.length))); }
+function rRender(){ const box = $('rList'); box.textContent = ''; if (!RV) return;
+  const L = rItems(), nf = RV.list.filter(x => !x.test && x.flags.length).length;
+  $('rF').options[0].text = '⚠️ محتاج تصليح (' + nf + ')'; $('rF').options[1].text = 'سليم ومستني اعتماد (' + RV.list.filter(x => !x.test && !x.flags.length).length + ')';
+  if (!L.length) { box.append(el('div', $('rF').value === 'flag' ? 'مفيش حاجة محتاجة تصليح 👌' : 'مفيش حاجة مستنية', 'muted')); return; }
+  L.slice(0, 120).forEach(x => box.append(rCard(x))); }
+function rCard(x){ const c = el('div', null, 'card'); c.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+  const h = el('div', null, 'top'), t = el('div'); t.append(el('b', x.jobNo + ' — ' + (x.client || '')), el('div', x.car, 'muted')); h.append(t, el('span', money(x.cost), 'cpill')); c.append(h);
+  c.append(el('div', x.item + (x.qty > 1 ? ' × ' + x.qty : '')));
+  c.append(el('div', [x.supplier || 'من غير مورد', x.pay === 'Credit' ? 'أجل' : 'كاش', 'سجله ' + x.by, String(x.at || '').slice(5, 16)].join(' · '), 'muted'));
+  if (x.receipt) { const a = el('a', '📷 الإيصال'); a.href = x.receipt; a.target = '_blank'; a.rel = 'noopener'; c.append(a); } else if (x.note) c.append(el('div', x.note, 'muted'));
+  x.flags.forEach(f => { const d = el('div', '⚠️ ' + f[1]); d.style.cssText = 'color:#C0392B;font-size:13px'; c.append(d); });
+  const ed = el('div'); ed.hidden = true; ed.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+  const inp = (lbl, v, num) => { const w = el('div'), l = el('label', lbl), i = el('input'); i.value = v; if (num) i.inputMode = 'decimal'; w.append(l, i); ed.append(w); return i; };
+  const iI = inp('البند', x.item), iQ = inp('العدد', x.qty, 1), iC = inp('المبلغ الإجمالي للسطر', x.cost, 1), iS = inp('المورد', x.supplier);
+  const m = el('div', null, 'msg'), a = el('div', null, 'acts'); a.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+  const save = cbtn('حفظ + اعتمد', '', async () => { try { save.disabled = true; await ops('expReviewSave', x.id, { item: iI.value, qty: iQ.value, cost: iC.value, supplier: iS.value }); await ops('expApprove', [x.id]); rDone(x, c, 'اتصلح واتعتمد'); } catch(e){ m.textContent = clean(e.message); m.className = 'msg err'; save.disabled = false; } });
+  ed.append(save);
+  const vd = el('div'); vd.hidden = true; vd.style.cssText = 'display:flex;flex-direction:column;gap:6px'; const why = el('input'); why.placeholder = 'ليه بيتلغي؟ (متسجل مرتين / غلط…)';
+  const vgo = cbtn('🗑 إلغاء المصروف', 'ghost', async () => { try { vgo.disabled = true; await ops('expVoid', x.id, why.value); rDone(x, c, 'اتلغى'); } catch(e){ m.textContent = clean(e.message); m.className = 'msg err'; vgo.disabled = false; } }); vd.append(why, vgo);
+  const ok = cbtn('✓ اعتمد', '', async () => { try { ok.disabled = true; await ops('expApprove', [x.id]); rDone(x, c, 'اتعتمد'); } catch(e){ m.textContent = clean(e.message); m.className = 'msg err'; ok.disabled = false; } });
+  const sp = el('div'); sp.hidden = true; sp.style.cssText = 'display:flex;flex-direction:column;gap:6px'; const rows = el('div'); rows.style.cssText = 'display:flex;flex-direction:column;gap:6px';
+  const addRow = (it, co) => { const r = el('div'); r.style.cssText = 'display:flex;gap:6px'; const a1 = el('input'), a2 = el('input'); a1.placeholder = 'البند'; a1.value = it || ''; a1.style.flex = '2'; a2.placeholder = 'المبلغ'; a2.inputMode = 'decimal'; a2.value = co || ''; a2.style.flex = '1'; r.append(a1, a2); rows.append(r); };
+  const guess = String(x.item).split(/\s*(?:\+|زائد|،)\s*/).filter(Boolean).map(t => { const mm = t.match(/(\d[\d,.]*)\s*(جنيه|ج)?\s*$/); return [mm ? t.slice(0, mm.index).trim() : t.trim(), mm ? mm[1].replace(/,/g, '') : '']; });
+  (guess.length > 1 ? guess : [[x.item, x.cost], ['', '']]).forEach(g => addRow(g[0], g[1]));
+  const spGo = cbtn('✂️ قسّم واعتمد', '', async () => { try { spGo.disabled = true; const parts = [...rows.children].map(r => { const i = r.querySelectorAll('input'); return { item: i[0].value, cost: i[1].value, cat: x.cat }; }).filter(z => z.item || z.cost);
+    const r = await ops('expSplit', x.id, parts); RV = await ops('expReview', {}); const ids = RV.list.filter(y => y.jobNo === x.jobNo && y.at === x.at && y.supplier === x.supplier && parts.some(z => z.item.trim() === y.item)).map(y => y.id); if (ids.length) await ops('expApprove', ids); rDone(x, c, 'اتقسم ' + parts.length + ' سطور (' + money(r.total) + ')'); } catch(e){ m.textContent = clean(e.message); m.className = 'msg err'; spGo.disabled = false; } });
+  sp.append(el('div', 'مجموع السطور لازم يساوي ' + money(x.cost), 'muted'), rows, cbtn('+ سطر', 'ghost', () => addRow()), spGo);
+  a.append(ok, cbtn('✏️ تعديل', 'ghost', () => { ed.hidden = !ed.hidden; vd.hidden = sp.hidden = true; }), cbtn('✂️ قسّم', 'ghost', () => { sp.hidden = !sp.hidden; ed.hidden = vd.hidden = true; }), cbtn('🗑', 'ghost', () => { vd.hidden = !vd.hidden; ed.hidden = sp.hidden = true; }));
+  [...a.children].forEach((b, i) => b.style.cssText = 'width:auto;margin:0;padding:10px 8px;flex:' + (i ? '1 1 0' : '2 1 0'));
+  c.append(a, ed, sp, vd, m); return c; }
+function rDone(x, c, t){ RV.list = RV.list.filter(y => y.id !== x.id); RV.count = Math.max(0, RV.count - 1); rBadge(RV.count); c.replaceWith(Object.assign(el('div', '✓ ' + x.jobNo + ' ' + x.item + ' — ' + t, 'muted'), {})); setTimeout(rRender, 900); }
+$('rAll').onclick = async () => { const ids = RV ? RV.list.filter(x => !x.test && !x.flags.length).map(x => x.id) : []; if (!ids.length) { csay('rMsg', 'مفيش سليم مستني', true); return; }
+  if ($('rAll').dataset.c !== '1') { $('rAll').dataset.c = '1'; $('rAll').textContent = 'دوس تاني تأكيد (' + ids.length + ')'; setTimeout(() => { $('rAll').dataset.c = ''; $('rAll').textContent = '✓ اعتمد كل السليم'; }, 4000); return; }
+  $('rAll').dataset.c = ''; $('rAll').textContent = '✓ اعتمد كل السليم';
+  try { const r = await ops('expApprove', ids); await rLoad(); csay('rMsg', 'اتعتمد ' + r.approved); } catch(e){ csay('rMsg', clean(e.message), true); } };
 function cRender(){ const box = $('cJobs'); box.textContent = '';
   if (!CJOBS.length) { box.append(el('div', 'مفيش عربيات عندكم دلوقتي.', 'muted')); return; }
   let lastSt = '';
