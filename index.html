@@ -220,6 +220,11 @@ li:last-child{border-bottom:0}
       </div>
     </div>
 
+    <div class="card" id="salCard">
+      <div class="top"><h2>💵 مرتبي</h2><button class="link" id="salGo">عرض</button></div>
+      <div id="salBox" class="muted" style="font-size:13.5px">دوس «عرض» تشوف اللي اتقبض والسلف.</div>
+    </div>
+
     <div class="card">
       <h2>طلب جديد</h2>
       <label for="rType">نوع الطلب</label>
@@ -228,7 +233,10 @@ li:last-child{border-bottom:0}
         <option value="Casual">أجازة Casual (عارضة)</option>
         <option value="Sick">أجازة Sick (مرضي)</option>
         <option value="EarlyLeave">أمشي بدري</option>
+        <option value="Advance">💵 سلفة</option>
       </select>
+      <div id="advBox" hidden><div class="row2"><div><label for="aAmt">المبلغ</label><input id="aAmt" inputmode="decimal"></div>
+        <div><label for="aN">تتخصم على كام مرة؟</label><select id="aN"><option value="1">مرة واحدة</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="6">6</option></select></div></div></div>
       <div class="row2">
         <div><label for="rFrom" id="fromLbl">من</label><input type="date" id="rFrom"></div>
         <div id="toBox"><label for="rTo">لحد</label><input type="date" id="rTo"></div>
@@ -260,7 +268,7 @@ li:last-child{border-bottom:0}
 
 <script>
 const $ = id => document.getElementById(id);
-const LBL = {Annual:'Annual',Casual:'Casual',Sick:'Sick',EarlyLeave:'يمشي بدري'};
+const LBL = {Annual:'Annual',Casual:'Casual',Sick:'Sick',EarlyLeave:'يمشي بدري',Advance:'💵 سلفة'};
 const ST = {Pending:'مستني',Approved:'اتوافق',Rejected:'اترفض'};
 let PIN = null, busy = false;
 function t12(s){ const m = String(s||'').match(/^(\d{1,2}):(\d{2})$/); if (!m) return s; const h = +m[1]; return (h % 12 || 12) + ':' + m[2] + (h < 12 ? ' AM' : ' PM'); }
@@ -346,7 +354,7 @@ $('act').onclick = async () => {
   busy = false;
 };
 
-function syncType(){ const t = $('rType').value;
+function syncType(){ const t = $('rType').value; const adv = t === 'Advance'; $('advBox').hidden = !adv; $('rFrom').closest('.row2').hidden = adv;
   $('toBox').hidden = t === 'EarlyLeave'; $('timeBox').hidden = t !== 'EarlyLeave';
   $('fileBox').hidden = t !== 'Sick'; $('fromLbl').textContent = t === 'EarlyLeave' ? 'اليوم' : 'من'; }
 $('rType').onchange = syncType; syncType();
@@ -359,6 +367,13 @@ function readFile(f){ return new Promise((res, rej) => { if (!f) return res(null
 $('rSend').onclick = async () => {
   const q = {type:$('rType').value, from:$('rFrom').value, to:$('rTo').value, time:$('rTime').value, reason:$('rReason').value.trim()};
   const m = $('rMsg'); m.className = 'msg';
+  if (q.type === 'Advance') {   // advances go through the Operations system (it writes the request in the HR sheet)
+    if (!(Number($('aAmt').value) > 0)) { m.className = 'msg err'; m.textContent = 'اكتب مبلغ السلفة'; return; }
+    if (!q.reason) { m.className = 'msg err'; m.textContent = 'اكتب سبب السلفة'; return; }
+    $('rSend').disabled = true; m.textContent = 'بيتبعت…';
+    try { salShow(await ops('advanceReq', {amount: $('aAmt').value, months: $('aN').value, reason: q.reason})); m.textContent = 'طلب السلفة اتبعت لإسماعيل، ومستني الموافقة.'; $('aAmt').value = ''; $('rReason').value = ''; await load(); }
+    catch(e) { m.className = 'msg err'; m.textContent = clean(e.message); }
+    $('rSend').disabled = false; return; }
   if (!q.from) { m.className = 'msg err'; m.textContent = 'اختار التاريخ'; return; }
   if (q.type === 'EarlyLeave' && !q.time) { m.className = 'msg err'; m.textContent = 'اكتب الساعة اللي هتمشي فيها'; return; }
   $('rSend').disabled = true; m.textContent = 'بيتبعت…';
@@ -371,6 +386,21 @@ $('rSend').onclick = async () => {
   } catch(e) { m.className = 'msg err'; m.textContent = clean(e.message); }
   $('rSend').disabled = false;
 };
+
+/* ---------- my pay: what was really paid (from the HR sheet), advances left ---------- */
+function salShow(r){ const B = $('salBox'); B.textContent = ''; B.className = '';
+  const n = x => Number(x || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+  const st = document.createElement('div'); st.className = 'stats';
+  [['اتقبض الشهر ده', n(r.monthPaid)], ['باقي من السلف', n(r.advLeft)]].forEach(x => { const d = document.createElement('div'); d.className = 'stat'; const a = document.createElement('span'); a.textContent = x[0]; const b = document.createElement('b'); b.textContent = x[1]; d.append(a, b); st.append(d); });
+  B.append(st);
+  if (!r.pays.length) { const e = document.createElement('div'); e.className = 'muted'; e.textContent = 'لسه مفيش مرتبات اتسجل إنها اتصرفت.'; B.append(e); }
+  r.pays.forEach(p => { const c = document.createElement('div'); c.style.cssText = 'border-top:1px solid var(--line);padding:8px 0;font-size:13.5px';
+    const h = document.createElement('div'); h.style.cssText = 'display:flex;justify-content:space-between;font-weight:600'; const a = document.createElement('span'); const dm = x => { const m = String(x || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? +m[3] + '/' + +m[2] : x; }; a.textContent = 'اتقبض ' + dm(p.at) + (p.period ? ' — أسبوع ' + dm(p.period) : ''); const b = document.createElement('span'); b.textContent = n(p.amount) + ' جنيه'; h.append(a, b);
+    const parts = [['الأساسي', p.base, ''], ['Over Time + Bonus', p.extra + p.ot + p.bonus, '+'], ['منح', p.grant, '+'], ['تأخير', p.late, '-'], ['غياب', p.absent, '-'], ['خصم', p.ded, '-'], ['سلفة', p.adv, '-']].filter(x => x[1]);
+    const d = document.createElement('div'); d.className = 'muted'; d.textContent = parts.map(x => x[0] + ' ' + x[2] + n(x[1])).join(' · '); c.append(h, d); B.append(c); });
+  if (r.advReqs.length) { const t = document.createElement('div'); t.className = 'muted'; t.style.marginTop = '8px';
+    t.textContent = 'طلبات السلف: ' + r.advReqs.map(a => n(a.amount) + ' (' + ({Pending: 'مستني', Approved: 'اتوافق', Rejected: 'اترفض'}[a.status] || a.status) + ')').join(' · '); B.append(t); } }
+$('salGo').onclick = async () => { $('salBox').textContent = 'بيحمّل…'; try { salShow(await ops('mySalary')); $('salGo').textContent = '↻'; } catch(e){ $('salBox').textContent = clean(e.message); } };
 
 /* ---------- expenses: saved in the Operations system and posted on the job's Asana task ---------- */
 const OPS = 'https://script.google.com/macros/s/AKfycbxwXpKR8Le67ijMB5piBEgDF5E4WKtxXjlwoPCzjN6bvqEB0wuw2OWakVGGJk5-2FFiKQ/exec';
