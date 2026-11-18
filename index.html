@@ -435,7 +435,7 @@ function xLines(){ const out = [{ item: $('xItem').value.trim(), qty: $('xQty').
   return out.filter((l, i) => i === 0 || l.item || l.cost); }
 function xTot(){ const ls = xLines(); const t = ls.reduce((s, l) => s + (Number(l.cost) || 0), 0); $('xTot').textContent = ls.length > 1 ? 'الإجمالي: ' + t.toLocaleString('en-US') + ' (' + ls.length + ' بنود)' : ''; }
 $('xAddLine').onclick = () => { const n = $('xMore').children.length + 2, r = document.createElement('div'); r.className = 'xl'; r.style.cssText = 'border-top:1px dashed var(--line);margin-top:10px;padding-top:6px';
-  r.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">بند ' + n + '</b><button type="button" class="link" style="color:var(--bad)">شيل ✕</button></div>' +
+  r.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">بند ' + n + '</b><button type="button" class="link" style="color:#C0392B">شيل ✕</button></div>' +
     '<input class="li" placeholder="البند"><div class="row2"><div><label>المبلغ</label><input class="lc" inputmode="decimal"></div><div><label>العدد</label><input class="lq" inputmode="numeric" value="1"></div></div>' +
     '<select class="lt" style="margin-top:6px"><option value="Parts">قطع غيار</option><option value="Labour">مصنعية</option><option value="Other">أخرى</option></select>';
   r.querySelector('.lt').value = $('xCat').value; r.querySelector('button').onclick = () => { r.remove(); xTot(); xEstMark(); }; r.addEventListener('input', xTot); $('xMore').append(r); r.querySelector('.li').focus(); };
@@ -448,7 +448,7 @@ function xEstRender(j){ const L = $('xEstL'); L.textContent = ''; const items = 
     b.onclick = () => xEstPick(x); L.append(b); });
   const B = $('xBud'); B.textContent = ''; B.style.color = '';
   if (j.budget) { const rem = j.budget.cap - j.budget.spent; B.textContent = '💰 حد التكلفة: ' + money0(j.budget.cap) + ' · اتصرف: ' + money0(j.budget.spent) + ' · ' + (rem >= 0 ? 'فاضل: ' + money0(rem) : 'زيادة: ' + money0(-rem) + ' — بلّغ المكتب');
-    if (rem < 0) B.style.color = 'var(--bad)'; else if (rem < j.budget.cap * 0.2) B.style.color = 'var(--warn)'; }
+    if (rem < 0) B.style.color = '#C0392B'; else if (rem < j.budget.cap * 0.2) B.style.color = 'var(--warn)'; }
   xEstMark(); }
 function xEstPick(x){ let row = null;
   if (!$('xItem').value.trim() && !$('xCost').value.trim()) { $('xItem').value = x.item; $('xItem').dataset.estId = x.id; $('xQty').value = x.qty || 1; $('xCat').value = x.cat || 'Parts'; $('xCost').focus(); }
@@ -558,6 +558,7 @@ async function cLoad(){ cView('cList'); if (!CJOBS.length) csay('cMsg', 'بيح�
   try { const r = await ops('staffHome'); CJOBS = r.jobs; CPHASE = r.phase || 1; csay('cMsg', ''); cRender(); return r; } catch(e){ csay('cMsg', clean(e.message), true); } }
 $('cReload').onclick = () => cLoad();
 function cNext(j){
+  if (j.asana) return ['المرحلة بتمشي من Asana (' + (CSL[j.status] || j.status) + ')'];
   if (j.status === 'Request') return ['استلام العربية', () => cCheck(j, 'Reception')];
   if (j.status === 'Received') return j.type === 'Quick' ? ['مستني الفاتورة من المكتب'] : ['فحص العربية', () => cCheck(j, 'Inspection')];
   if (j.status === 'Inspected') return [j.draft ? 'كمّل المقايسة (' + j.draft + ')' : 'اكتب المقايسة', () => cEstOpen(j)];
@@ -571,11 +572,18 @@ function cNext(j){
 function fmtDT(d){ if (!d) return ''; d = String(d).replace('T', ' '); const t = new Date(d.replace(' ', 'T')); if (isNaN(t)) return d;
   const days = ['الأحد','الاتنين','التلات','الأربع','الخميس','الجمعة','السبت'], h = t.getHours(), m = ('0' + t.getMinutes()).slice(-2);
   return days[t.getDay()] + ' ' + t.getDate() + '/' + (t.getMonth() + 1) + (d.length > 10 ? ' ' + ((h % 12) || 12) + ':' + m + (h < 12 ? ' ص' : ' م') : ''); }
+function cMoney(j){ const b = j.budget; if (!b) return null; const d = el('div', '', 'muted'); d.style.fontWeight = '600';
+  if (b.cap) { const rem = b.cap - b.spent; d.textContent = '💰 اتصرف ' + money(b.spent) + ' من ' + money(b.cap) + (rem >= 0 ? ' — فاضل ' + money(rem) : ' — زيادة ' + money(-rem));
+    d.style.color = rem < 0 ? '#C0392B' : rem < b.cap * 0.2 ? 'var(--warn)' : ''; }
+  else d.textContent = '💰 اتصرف ' + money(b.spent) + (j.canBudget ? ' — مفيش حد تكلفة لسه' : '');
+  return d; }
 function cRender(){ const box = $('cJobs'); box.textContent = '';
   if (!CJOBS.length) { box.append(el('div', 'مفيش عربيات عندكم دلوقتي.', 'muted')); return; }
-  CJOBS.forEach(j => { const c = el('div', null, 'card job'), h = el('div', null, 'top'), t = el('div');
+  let lastSt = '';
+  CJOBS.forEach(j => { if (j.status !== lastSt) { lastSt = j.status; const g = el('div', (CSL[j.status] || j.status) + ' · ' + CJOBS.filter(x => x.status === j.status).length, 'grp'); box.append(g); }
+    const c = el('div', null, 'card job'), h = el('div', null, 'top'), t = el('div');
     t.append(el('b', j.client), el('div', j.car + (j.plate ? ' · ' + j.plate : ''), 'muted')); h.append(t, el('span', CSL[j.status] || j.status, 'cpill'));
-    const n = cNext(j); c.append(h, el('div', (n[1] ? '➜ ' : '⏳ ') + n[0], 'next'));
+    const n = cNext(j); c.append(h, el('div', (n[1] ? '➜ ' : '⏳ ') + n[0], 'next')); const mn = cMoney(j); if (mn) c.append(mn);
     if (j.status === 'Request' && (j.pickupAt || j.pickupAddr)) c.append(el('div', '📍 استلام ' + [j.pickupAt ? fmtDT(j.pickupAt) : '', j.pickupAddr].filter(Boolean).join(' · '), 'muted'));
     if (j.due && j.due.dueAt) { const dd = el('div', '⏰ التسليم للعميل: ' + fmtDT(j.due.dueAt) + (j.due.late ? ' — متأخرة' : ''), 'muted'); if (j.due.late) dd.style.color = 'var(--warn)'; c.append(dd); }
     c.onclick = () => cOpen(j.jobNo); box.append(c); }); }
@@ -588,8 +596,14 @@ function cOpen(no){ const j = CJOBS.find(x => x.jobNo === no); if (!j) { CCUR = 
   const N = $('cjNow'); N.textContent = ''; const n = cNext(j);
   if (n[1]) N.append(cbtn(n[0], '', n[1])); else N.append(el('div', n[0], 'muted'));
   const a = el('div', null, 'acts'); a.append(cbtn('+ مصروف', 'ghost', async () => { TAB = 'exp'; $('tAtt').className = ''; $('tCar').className = ''; $('tExp').className = 'on'; show('main'); await xLoad(); const x = XJOBS.find(y => y.jobNo === j.jobNo) || j; xOpen(x); }));
-  if (j.status === 'Working' || j.status === 'ClientApproved') a.append(cbtn('+ مقايسة إضافية', 'ghost', () => cEstOpen(j))); else a.style.gridTemplateColumns = '1fr';
-  N.append(a); cTrip(j);
+  if (j.asana) a.append(cbtn(j.draft ? '📝 كمّل المقايسة (' + j.draft + ')' : '📝 مقايسة', 'ghost', () => cEstOpen(j)));
+  else if (j.status === 'Working' || j.status === 'ClientApproved') a.append(cbtn('+ مقايسة إضافية', 'ghost', () => cEstOpen(j))); else a.style.gridTemplateColumns = '1fr';
+  N.append(a); const mn = cMoney(j); if (mn) N.append(mn);
+  if (j.canBudget) { const w = el('div'); w.style.marginTop = '8px'; const l = el('label', '💰 حد التكلفة المتفق عليه مع العميل'); l.htmlFor = 'cjCap'; const i = el('input'); i.id = 'cjCap'; i.inputMode = 'decimal';
+    i.value = j.budget && j.budget.cap ? j.budget.cap : ''; i.placeholder = 'مثلاً 25000';
+    const sv = cbtn('حفظ الحد', 'ghost', async () => { try { await ops('setJob', j.jobNo, {Budget: i.value.trim()}); await cRefresh(j.jobNo, i.value.trim() ? 'اتحفظ الحد — إسماعيل بيجيله تنبيه عند 80% و100%' : 'اتشال الحد'); } catch(e){ csay('cjMsg', clean(e.message), true); } });
+    w.append(l, i, sv); N.append(w); }
+  cTrip(j);
   const I = $('cjItems'); I.textContent = ''; $('cjEst').hidden = !j.items.length;
   j.items.forEach(x => { const li = el('li'); li.append(el('span', x.item), el('span', x.qty > 1 ? '× ' + x.qty : '', 'muted')); I.append(li); });
   cView('cJob'); }
