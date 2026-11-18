@@ -460,6 +460,7 @@ function xJKSync(){ const quick = $('xJK').value !== 'parts';
   if (quick) { XPAY = 'Cash'; $('xFromBox').hidden = false; document.querySelectorAll('#xPay button').forEach(x => x.className = x.dataset.v === 'Cash' ? 'on' : ''); } }
 $('xJK').onchange = xJKSync;
 /* more lines from the same supplier */
+let XCONF = {}; function confirm_(msg, k){ const key = k + '|' + msg; if (XCONF[key]) return true; XCONF = {}; XCONF[key] = 1; $('xMsg').className = 'msg err'; $('xMsg').textContent = msg; return false; }
 function xLines(){ const out = [{ item: $('xItem').value.trim(), qty: $('xQty').value, cost: $('xCost').value.trim(), cat: $('xCat').value, estId: $('xItem').dataset.estId || '' }];
   document.querySelectorAll('#xMore .xl').forEach(r => out.push({ item: r.querySelector('.li').value.trim(), qty: r.querySelector('.lq').value, cost: r.querySelector('.lc').value.trim(), cat: r.querySelector('.lt').value, estId: r.dataset.estId || '' }));
   return out.filter((l, i) => i === 0 || l.item || l.cost); }
@@ -548,7 +549,13 @@ $('xSave').onclick = async () => {
       const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل على ' + no; }
     catch(e) { err(clean(e.message)); }
     $('xSave').disabled = false; return; }
-  const lines = xLines(); for (let i = 0; i < lines.length; i++) { if (!lines[i].item) return err((lines.length > 1 ? 'بند ' + (i + 1) + ': ' : '') + 'اكتب البند'); if (!(Number(lines[i].cost) > 0)) return err((lines.length > 1 ? 'بند ' + (i + 1) + ': ' : '') + 'اكتب المبلغ'); }
+  const lines = xLines(); for (let i = 0; i < lines.length; i++) { const L = lines[i], pre = lines.length > 1 ? 'بند ' + (i + 1) + ': ' : '';
+    if (!L.item) return err(pre + 'اكتب البند'); if (!(Number(L.cost) > 0)) return err(pre + 'اكتب المبلغ');
+    // the mistakes we keep seeing in review
+    if (/^(قطع غيار|قطع|صيانة|صيانه|مصاريف|حاجات|مستلزمات|خامات|مشتريات|متنوع)\s*$/.test(L.item)) return err(pre + '«' + L.item + '» مش واضح — اكتب اسم القطعة أو الشغل بالظبط (لو كذا حاجة: «+ بند تاني» لكل واحدة)');
+    if ((/\+|زائد/.test(L.item) || (L.item.match(/\d{2,}/g) || []).length >= 2) && L.item.length > 15 && !L.estId) return err(pre + 'شكلك كاتب أكتر من حاجة في سطر واحد — سجّل كل حاجة في بند لوحدها بمبلغها (دوس «+ بند تاني من نفس المورد»)');
+    if (L.cat === 'Parts' && /مصنع|ميكانيك|تركيب|ظبط|ضبط|زواي|ترصيص|غسيل|تلميع|سمكر|دهان|خراط|لحام|برمجة|ونش/.test(L.item) && !L.estId) return err(pre + '«' + L.item + '» ده شغل/مصنعية مش قطع غيار — غيّر النوع لـ «مصنعية»');
+    if (Number(L.qty) > 1 && !confirm_(pre + 'العدد ' + L.qty + ' — متأكد إن ' + L.cost + ' هو إجمالي الـ ' + L.qty + ' مش سعر الواحدة؟ دوس حفظ تاني لو تمام', i)) return; }
   if (!XPAY) return err('اختار كاش ولا أجل'); if (!sup) return err('اختار المورد');
   if (sup === '__new' && (!$('xNsName').value.trim() || $('xNsPhone').value.replace(/\D/g,'').length < 8)) return err('اكتب اسم المورد الجديد ورقم تليفونه');
   if (!XREC && !$('xNoRec').value.trim()) return err('صوّر الإيصال، أو اكتب ليه مفيش إيصال');
