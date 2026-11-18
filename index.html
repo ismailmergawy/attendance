@@ -114,6 +114,9 @@ li:last-child{border-bottom:0}
       <div class="card">
         <label for="xJK" style="margin-top:0">نوع المصروف</label><select id="xJK"></select>
         <div class="muted" id="xJKHint" style="margin-top:6px"></div>
+        <div id="xEst" hidden style="background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px">
+          <b style="font-size:14px">بنود المقايسة اللي اتوافق عليها</b><div class="muted" style="font-size:12.5px">دوس على البند علشان تسجّل مصروفه — اكتب انت المورد والمبلغ الحقيقي</div>
+          <div id="xEstL" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div><div id="xBud" style="font-size:13px;margin-top:8px"></div></div>
         <div id="xPartsA"><label for="xItem">البند</label><input id="xItem" placeholder="مثلاً: طقم تيل أمامي"></div>
         <div class="row2">
           <div><label for="xCost">المبلغ (الإجمالي)</label><input id="xCost" inputmode="decimal"></div>
@@ -406,6 +409,7 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
   $('xJob').textContent = j.jobNo + ' — ' + j.client; $('xCar').textContent = j.car + (j.plate ? ' · ' + j.plate : '');
   ['xItem','xCost','xNoRec','xNote','xNsName','xNsPhone'].forEach(i => $(i).value = ''); $('xQty').value = '1'; $('xCat').value = 'Parts';
   $('xPhoto').value = ''; $('xPrev').hidden = true; $('xFromBox').hidden = true; $('xMsg').textContent = ''; $('xMore').textContent = ''; xTot();
+  delete $('xItem').dataset.estId; xEstRender(j);
   const L = $('xDoneL'); L.innerHTML = '<li class="muted">بيحمّل…</li>';
   ops('jobExps', j.jobNo).then(r => { L.textContent = ''; if (!r.length) { L.innerHTML = '<li class="muted">لسه مفيش مصاريف متسجلة على العربية دي</li>'; return; }
     let t = 0; r.forEach(e => { t += e.cost; const li = document.createElement('li'); li.style.cssText = 'display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:14px';
@@ -417,7 +421,7 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
   const k = $('xJK'); k.textContent = ''; [['parts','🔩 قطع غيار / ورشة / حاجة من مورد']].concat(XJC.map(x => [x.key, ({fuel:'⛽ ',transport:'🚕 ',test:'🧪 ',food:'🍽 '}[x.key]||'') + x.label + (x.internal ? ' (علينا)' : ' (على العميل)')]))
     .forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; k.append(op); }); k.value = 'parts'; xJKSync(); xView('form'); }
 function xJKSync(){ const quick = $('xJK').value !== 'parts';
-  ['xPartsA','xPartsB','xPartsC','xQtyBox','xMore','xAddLine','xTot'].forEach(i => $(i).hidden = quick);
+  ['xPartsA','xPartsB','xPartsC','xQtyBox','xMore','xAddLine','xTot'].forEach(i => $(i).hidden = quick); $('xEst').hidden = quick || !((XCUR && XCUR.items && XCUR.items.length) || (XCUR && XCUR.budget));
   $('xNoRec').parentNode.querySelector('label[for=xNoRec]').hidden = quick; $('xNoRec').hidden = quick;
   const internal = ['test','food'].includes($('xJK').value);
   $('xPhoto').hidden = internal; $('xPhoto').parentNode.querySelector('label[for=xPhoto]').hidden = internal; if (internal) { $('xPhoto').value = ''; XREC = null; $('xPrev').hidden = true; }
@@ -426,15 +430,33 @@ function xJKSync(){ const quick = $('xJK').value !== 'parts';
   if (quick) { XPAY = 'Cash'; $('xFromBox').hidden = false; document.querySelectorAll('#xPay button').forEach(x => x.className = x.dataset.v === 'Cash' ? 'on' : ''); } }
 $('xJK').onchange = xJKSync;
 /* more lines from the same supplier */
-function xLines(){ const out = [{ item: $('xItem').value.trim(), qty: $('xQty').value, cost: $('xCost').value.trim(), cat: $('xCat').value }];
-  document.querySelectorAll('#xMore .xl').forEach(r => out.push({ item: r.querySelector('.li').value.trim(), qty: r.querySelector('.lq').value, cost: r.querySelector('.lc').value.trim(), cat: r.querySelector('.lt').value }));
+function xLines(){ const out = [{ item: $('xItem').value.trim(), qty: $('xQty').value, cost: $('xCost').value.trim(), cat: $('xCat').value, estId: $('xItem').dataset.estId || '' }];
+  document.querySelectorAll('#xMore .xl').forEach(r => out.push({ item: r.querySelector('.li').value.trim(), qty: r.querySelector('.lq').value, cost: r.querySelector('.lc').value.trim(), cat: r.querySelector('.lt').value, estId: r.dataset.estId || '' }));
   return out.filter((l, i) => i === 0 || l.item || l.cost); }
 function xTot(){ const ls = xLines(); const t = ls.reduce((s, l) => s + (Number(l.cost) || 0), 0); $('xTot').textContent = ls.length > 1 ? 'الإجمالي: ' + t.toLocaleString('en-US') + ' (' + ls.length + ' بنود)' : ''; }
 $('xAddLine').onclick = () => { const n = $('xMore').children.length + 2, r = document.createElement('div'); r.className = 'xl'; r.style.cssText = 'border-top:1px dashed var(--line);margin-top:10px;padding-top:6px';
   r.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px">بند ' + n + '</b><button type="button" class="link" style="color:var(--bad)">شيل ✕</button></div>' +
     '<input class="li" placeholder="البند"><div class="row2"><div><label>المبلغ</label><input class="lc" inputmode="decimal"></div><div><label>العدد</label><input class="lq" inputmode="numeric" value="1"></div></div>' +
     '<select class="lt" style="margin-top:6px"><option value="Parts">قطع غيار</option><option value="Labour">مصنعية</option><option value="Other">أخرى</option></select>';
-  r.querySelector('.lt').value = $('xCat').value; r.querySelector('button').onclick = () => { r.remove(); xTot(); }; r.addEventListener('input', xTot); $('xMore').append(r); r.querySelector('.li').focus(); };
+  r.querySelector('.lt').value = $('xCat').value; r.querySelector('button').onclick = () => { r.remove(); xTot(); xEstMark(); }; r.addEventListener('input', xTot); $('xMore').append(r); r.querySelector('.li').focus(); };
+/* the approved estimate: tap a line to record what it really cost (supplier + amount are the team's) */
+function money0(n){ return Number(n || 0).toLocaleString('en-US', {maximumFractionDigits: 0}); }
+function xEstRender(j){ const L = $('xEstL'); L.textContent = ''; const items = j.items || [];
+  items.forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.className = 'cpill'; b.dataset.id = x.id; b.style.cssText = 'cursor:pointer;padding:5px 12px;font-size:13px';
+    b.textContent = (x.done ? '✓ ' : '') + x.item + (x.qty > 1 ? ' × ' + x.qty : '') + (x.done ? ' — اتصرف ' + money0(x.done) : '');
+    if (x.done) b.style.opacity = '.6';
+    b.onclick = () => xEstPick(x); L.append(b); });
+  const B = $('xBud'); B.textContent = ''; B.style.color = '';
+  if (j.budget) { const rem = j.budget.cap - j.budget.spent; B.textContent = '💰 حد التكلفة: ' + money0(j.budget.cap) + ' · اتصرف: ' + money0(j.budget.spent) + ' · ' + (rem >= 0 ? 'فاضل: ' + money0(rem) : 'زيادة: ' + money0(-rem) + ' — بلّغ المكتب');
+    if (rem < 0) B.style.color = 'var(--bad)'; else if (rem < j.budget.cap * 0.2) B.style.color = 'var(--warn)'; }
+  xEstMark(); }
+function xEstPick(x){ let row = null;
+  if (!$('xItem').value.trim() && !$('xCost').value.trim()) { $('xItem').value = x.item; $('xItem').dataset.estId = x.id; $('xQty').value = x.qty || 1; $('xCat').value = x.cat || 'Parts'; $('xCost').focus(); }
+  else { $('xAddLine').click(); row = $('xMore').lastElementChild; row.dataset.estId = x.id; row.querySelector('.li').value = x.item; row.querySelector('.lq').value = x.qty || 1; row.querySelector('.lt').value = x.cat || 'Parts'; row.querySelector('.lc').focus(); }
+  xTot(); xEstMark(); }
+function xEstMark(){ const used = new Set([$('xItem').dataset.estId].concat([...document.querySelectorAll('#xMore .xl')].map(r => r.dataset.estId)).filter(Boolean));
+  document.querySelectorAll('#xEstL button').forEach(b => { b.style.background = used.has(b.dataset.id) ? 'var(--accent)' : ''; b.style.color = used.has(b.dataset.id) ? '#fff' : ''; b.disabled = used.has(b.dataset.id); }); }
+$('xItem').addEventListener('input', () => { if (!$('xItem').value.trim()) { delete $('xItem').dataset.estId; xEstMark(); } });
 ['xItem','xCost'].forEach(i => $(i).addEventListener('input', xTot));
 function shrink(f, done){ const img = new Image(), url = URL.createObjectURL(f);
   img.onload = () => { const k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement('canvas');
@@ -505,7 +527,7 @@ $('xSave').onclick = async () => {
     if (sup === '__new') { XSUPS = await ops('supplierAdd', {name: $('xNsName').value.trim(), phone: $('xNsPhone').value, type: 'قطع غيار'}); sup = $('xNsName').value.trim(); }
     const common = {jobNo: XCUR.jobNo, pay: XPAY, from: $('xFrom').value, supplier: sup, note: $('xNote').value.trim(), receipt: XREC, noReceipt: XREC ? '' : $('xNoRec').value.trim()};
     if (lines.length > 1) await ops('addExpenses', Object.assign({lines}, common));
-    else await ops('addExpense', Object.assign({item, cat: $('xCat').value, cost, qty: $('xQty').value}, common));
+    else await ops('addExpense', Object.assign({item, cat: $('xCat').value, cost, qty: $('xQty').value, estId: $('xItem').dataset.estId || ''}, common));
     const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل' + (lines.length > 1 ? ' ' + lines.length + ' بنود' : ' المصروف') + ' على ' + no + ' ونزل على Asana';
   } catch(e) { err(clean(e.message)); }
   $('xSave').disabled = false;
