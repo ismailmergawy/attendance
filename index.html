@@ -811,6 +811,14 @@ $('ceSend').onclick = async function(){ this.disabled = true; try { await ops('e
 
 PIN = getPin();
 if (PIN) load(); else show('login');
+
+/* 🔍 search on the lists (cars, review): hides what doesn't match and keeps working after a list redraws */
+function qn(t){ return String(t||'').toLowerCase().replace(/[ً-ْـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)); }
+[['cJobs', '#cJobs > .card'], ['rList', '#rList > .card']].forEach(([id, sel]) => { const box = $(id); if (!box) return;
+  const inp = document.createElement('input'); inp.type = 'search'; inp.placeholder = '🔍 بحث (عميل، عربية، Job No، بند…)'; inp.style.margin = '0 0 6px'; box.before(inp);
+  const apply = () => { const q = qn(inp.value).split(/\s+/).filter(Boolean); document.querySelectorAll(sel).forEach(c => { c.hidden = q.length > 0 && !q.every(w => qn(c.textContent).includes(w)); });
+    if (id === 'cJobs') document.querySelectorAll('#cJobs > .grp').forEach(g => { g.hidden = q.length > 0; }); };
+  inp.oninput = apply; new MutationObserver(apply).observe(box, { childList: true }); });
 </script>
 </body>
 </html>
