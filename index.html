@@ -562,7 +562,10 @@ $('xSave').onclick = async () => {
     if (/^(قطع غيار|قطع|صيانة|صيانه|مصاريف|حاجات|مستلزمات|خامات|مشتريات|متنوع)\s*$/.test(L.item)) return err(pre + '«' + L.item + '» مش واضح — اكتب اسم القطعة أو الشغل بالظبط (لو كذا حاجة: «+ بند تاني» لكل واحدة)');
     if ((/\+|زائد/.test(L.item) || (L.item.match(/\d{2,}/g) || []).length >= 2) && L.item.length > 15 && !L.estId) return err(pre + 'شكلك كاتب أكتر من حاجة في سطر واحد — سجّل كل حاجة في بند لوحدها بمبلغها (دوس «+ بند تاني من نفس المورد»)');
     if (L.cat === 'Parts' && /مصنع|ميكانيك|تركيب|ظبط|ضبط|زواي|ترصيص|غسيل|تلميع|سمكر|دهان|خراط|لحام|برمجة|ونش/.test(L.item) && !L.estId) return err(pre + '«' + L.item + '» ده شغل/مصنعية مش قطع غيار — غيّر النوع لـ «مصنعية»');
-    if (Number(L.qty) > 1 && !confirm_(pre + 'العدد ' + L.qty + ' — متأكد إن ' + L.cost + ' هو إجمالي الـ ' + L.qty + ' مش سعر الواحدة؟ دوس حفظ تاني لو تمام', i)) return; }
+  }
+  // every line with a quantity is asked about together, once: a second tap on save confirms them all
+  const qs = lines.map((L, i) => Number(L.qty) > 1 ? (lines.length > 1 ? 'بند ' + (i + 1) + ': ' : '') + 'العدد ' + L.qty + ' — المبلغ ' + L.cost : '').filter(Boolean);
+  if (qs.length && !confirm_(qs.join(' · ') + ' — متأكد إن ده الإجمالي مش سعر الواحدة؟ دوس حفظ تاني لو تمام', 'qty|' + qs.join('|'))) return;
   if (!XPAY) return err('اختار كاش ولا أجل'); if (!sup) return err('اختار المورد');
   if (sup === '__new' && (!$('xNsName').value.trim() || $('xNsPhone').value.replace(/\D/g,'').length < 8)) return err('اكتب اسم المورد الجديد ورقم تليفونه');
   if (!XREC && !$('xNoRec').value.trim()) return err('صوّر الإيصال، أو اكتب ليه مفيش إيصال');
