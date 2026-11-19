@@ -53,6 +53,7 @@ async function load(){
   try {
     const r = await fetch(OPS, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({fn: 'docGet', t})});
     const j = await r.json(); if (!j.ok) throw new Error(j.error);
+    if (j.data.files) return pack(j.data);
     const bin = atob(j.data.b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
     FILE = new File([a], j.data.name, {type: 'application/pdf'}); URLX = URL.createObjectURL(FILE);
     if (j.data.drive) { $('gd').href = j.data.drive; $('gd').hidden = false; }
@@ -64,6 +65,27 @@ async function load(){
       : 'على الكمبيوتر: الزرار بينزّل الملف ويفتح WhatsApp — افتح شات العميل واسحب الملف من Downloads جوه الشات (أو 📎 ← Document).';
     $('view').src = URLX; $('view').hidden = false;
   } catch (e) { $('name').textContent = 'الملف مش متاح'; msg(e.message || 'جرّب تاني', true); }
+}
+// several invoices + the message for one client (the pay reminder / apology): two steps, so WhatsApp never drops either part
+function toFile(f){ const bin = atob(f.b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new File([a], f.name, {type: 'application/pdf'}); }
+function pack(d){
+  const FILES = d.files.map(toFile), ok = MOBILE && navigator.canShare && navigator.canShare({files: FILES});
+  document.title = d.name; $('name').textContent = d.name; $('acts').hidden = true;
+  const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;gap:10px;margin-top:10px';
+  const tx = document.createElement('textarea'); tx.value = d.text || ''; tx.readOnly = true; tx.dir = 'auto'; tx.rows = 8;
+  tx.style.cssText = 'width:100%;font:inherit;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg);color:var(--fg)';
+  const b1 = document.createElement('button'); b1.className = 'main'; b1.textContent = '1️⃣ ابعت الرسالة';
+  b1.onclick = () => { try { navigator.clipboard.writeText(d.text || ''); } catch (e) {} const n = String(d.phone || '').replace(/\D/g, '');
+    location.href = (n ? 'https://wa.me/' + n : 'https://wa.me/') + '?text=' + encodeURIComponent(d.text || ''); msg('✓ الرسالة اتنسخت كمان — لو ماظهرتش في الشات الصقها'); };
+  const b2 = document.createElement('button'); b2.className = 'main'; b2.textContent = '2️⃣ ابعت الفواتير (' + FILES.length + ' PDF)';
+  b2.onclick = async () => { if (ok) { try { await navigator.share({files: FILES}); msg('✓ اختار نفس الشات'); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+    FILES.forEach((f, i) => setTimeout(() => { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.append(a); a.click(); a.remove(); }, i * 400));
+    msg('✓ الفواتير نزلت في Downloads — اسحبها جوه شات العميل (أو 📎 ← Document)'); };
+  const ul = document.createElement('div'); ul.className = 'muted';
+  FILES.forEach(f => { const a = document.createElement('a'); a.textContent = '📄 ' + f.name; a.href = URL.createObjectURL(f); a.target = '_blank'; a.style.cssText = 'display:block;color:var(--fg);padding:3px 0'; ul.append(a); });
+  $('hint').textContent = ok ? 'الأول دوس «ابعت الرسالة» وابعتها، وبعدين ارجع هنا ودوس «ابعت الفواتير» واختار WhatsApp ونفس الشات.'
+    : 'على الكمبيوتر: «ابعت الرسالة» بيفتح شات العميل والرسالة مكتوبة — ابعتها. وبعدين «ابعت الفواتير» بينزّلهم، اسحبهم جوه نفس الشات.';
+  box.append(tx, b1, b2, ul); $('acts').after(box);
 }
 const MOBILE = /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
 function save(){ const a = document.createElement('a'); a.href = URLX; a.download = FILE.name; document.body.append(a); a.click(); a.remove(); }
