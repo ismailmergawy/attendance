@@ -147,7 +147,7 @@ li:last-child{border-bottom:0}
   <section id="rev" hidden style="display:flex;flex-direction:column;gap:12px">
     <div class="top"><h1>🧾 مراجعة المصاريف</h1><button class="link" id="rReload">↻ تحديث</button></div>
     <div class="muted" style="font-size:13px">راجع مصاريف النهارده قبل ما تمشي: صلّح الاسم أو المبلغ، وبعدين ✓ اعتمد.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="rF" style="flex:1;min-width:150px"><option value="flag">⚠️ محتاج تصليح</option><option value="clean">سليم ومستني اعتماد</option><option value="all">كل اللي مستني</option></select><button class="btn" id="rAll" type="button">✓ اعتمد كل السليم</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><select id="rF" style="flex:1;min-width:150px"><option value="flag">⚠️ محتاج تصليح</option><option value="clean">سليم ومستني اعتماد</option><option value="all">كل اللي مستني</option><option value="done">✓ اتعتمدت آخر 7 أيام (تقدر تعدّلها)</option></select><button class="btn" id="rAll" type="button">✓ اعتمد كل السليم</button></div>
     <div class="msg" id="rMsg"></div>
     <div id="rList" style="display:flex;flex-direction:column;gap:10px"></div>
   </section>
@@ -626,18 +626,21 @@ function cMoney(j){ const b = j.budget; if (!b) return null; const d = el('div',
 let RV = null;
 function rBadge(n){ if (n === null || n === undefined) { $('tRev').hidden = true; return; } $('tRev').hidden = false; $('nRev').textContent = n ? '(' + n + ')' : ''; }
 async function rLoad(){ csay('rMsg', 'بيحمّل…'); try { RV = await ops('expReview', {}); rBadge(RV.count); csay('rMsg', ''); rRender(); } catch(e){ csay('rMsg', clean(e.message), true); } }
-$('rReload').onclick = () => rLoad(); $('rF').onchange = () => rRender();
-function rItems(){ const f = $('rF').value; return RV.list.filter(x => !x.test && (f === 'all' || (f === 'flag' ? x.flags.length : !x.flags.length))); }
-function rRender(){ const box = $('rList'); box.textContent = ''; if (!RV) return;
+let RVD = null;
+async function rLoadDone(){ csay('rMsg', 'بيحمّل…'); try { RVD = await ops('expReview', { all: true }); csay('rMsg', ''); rRender(); } catch(e){ csay('rMsg', clean(e.message), true); } }
+$('rReload').onclick = () => $('rF').value === 'done' ? rLoadDone() : rLoad(); $('rF').onchange = () => $('rF').value === 'done' ? rLoadDone() : rRender();
+function rItems(){ const f = $('rF').value; if (f === 'done') { const wk = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10); return (RVD ? RVD.list : []).filter(x => !x.test && x.status === 'Checked' && String(x.at).slice(0, 10) >= wk); } return RV.list.filter(x => !x.test && (f === 'all' || (f === 'flag' ? x.flags.length : !x.flags.length))); }
+function rRender(){ const box = $('rList'); box.textContent = ''; if (!RV || ($('rF').value === 'done' && !RVD)) return;
   const L = rItems(), nf = RV.list.filter(x => !x.test && x.flags.length).length;
   $('rF').options[0].text = '⚠️ محتاج تصليح (' + nf + ')'; $('rF').options[1].text = 'سليم ومستني اعتماد (' + RV.list.filter(x => !x.test && !x.flags.length).length + ')';
-  if (!L.length) { box.append(el('div', $('rF').value === 'flag' ? 'مفيش حاجة محتاجة تصليح 👌' : 'مفيش حاجة مستنية', 'muted')); return; }
+  if (!L.length) { box.append(el('div', $('rF').value === 'flag' ? 'مفيش حاجة محتاجة تصليح 👌' : $('rF').value === 'done' ? 'مفيش مصاريف اتعتمدت آخر 7 أيام' : 'مفيش حاجة مستنية', 'muted')); return; }
   L.slice(0, 120).forEach(x => box.append(rCard(x))); }
 function rCard(x){ const c = el('div', null, 'card'); c.style.cssText = 'display:flex;flex-direction:column;gap:6px';
   const h = el('div', null, 'top'), t = el('div'); t.append(el('b', x.jobNo + ' — ' + (x.client || '')), el('div', x.car, 'muted')); h.append(t, el('span', money(x.cost), 'cpill')); c.append(h);
   c.append(el('div', x.item + (x.qty > 1 ? ' × ' + x.qty : '')));
   c.append(el('div', [x.supplier || 'من غير مورد', x.pay === 'Credit' ? 'أجل' : 'كاش', 'سجله ' + x.by, String(x.at || '').slice(5, 16)].join(' · '), 'muted'));
   if (x.receipt) { const a = el('a', '📷 الإيصال'); a.href = x.receipt; a.target = '_blank'; a.rel = 'noopener'; c.append(a); } else if (x.note) c.append(el('div', x.note, 'muted'));
+  if (x.status === 'Checked') { const d = el('div', '✓ اتعتمد — لو فيه غلط دوس ✏️ تعديل وصلّحه'); d.style.cssText = 'color:#1E7B4F;font-size:13px'; c.append(d); }
   x.flags.forEach(f => { const d = el('div', '⚠️ ' + f[1]); d.style.cssText = 'color:#C0392B;font-size:13px'; c.append(d); });
   const ed = el('div'); ed.hidden = true; ed.style.cssText = 'display:flex;flex-direction:column;gap:6px';
   const inp = (lbl, v, num) => { const w = el('div'), l = el('label', lbl), i = el('input'); i.value = v; if (num) i.inputMode = 'decimal'; w.append(l, i); ed.append(w); return i; };
@@ -656,9 +659,11 @@ function rCard(x){ const c = el('div', null, 'card'); c.style.cssText = 'display
     const r = await ops('expSplit', x.id, parts); RV = await ops('expReview', {}); const ids = RV.list.filter(y => y.jobNo === x.jobNo && y.at === x.at && y.supplier === x.supplier && parts.some(z => z.item.trim() === y.item)).map(y => y.id); if (ids.length) await ops('expApprove', ids); rDone(x, c, 'اتقسم ' + parts.length + ' سطور (' + money(r.total) + ')'); } catch(e){ m.textContent = clean(e.message); m.className = 'msg err'; spGo.disabled = false; } });
   sp.append(el('div', 'مجموع السطور لازم يساوي ' + money(x.cost), 'muted'), rows, cbtn('+ سطر', 'ghost', () => addRow()), spGo);
   a.append(ok, cbtn('✏️ تعديل', 'ghost', () => { ed.hidden = !ed.hidden; vd.hidden = sp.hidden = true; }), cbtn('✂️ قسّم', 'ghost', () => { sp.hidden = !sp.hidden; ed.hidden = vd.hidden = true; }), cbtn('🗑', 'ghost', () => { vd.hidden = !vd.hidden; ed.hidden = sp.hidden = true; }));
+  if (x.status === 'Checked') ok.hidden = true;
   [...a.children].forEach((b, i) => b.style.cssText = 'width:auto;margin:0;padding:10px 8px;flex:' + (i ? '1 1 0' : '2 1 0'));
   c.append(a, ed, sp, vd, m); return c; }
-function rDone(x, c, t){ RV.list = RV.list.filter(y => y.id !== x.id); RV.count = Math.max(0, RV.count - 1); rBadge(RV.count); c.replaceWith(Object.assign(el('div', '✓ ' + x.jobNo + ' ' + x.item + ' — ' + t, 'muted'), {})); setTimeout(rRender, 900); }
+function rDone(x, c, t){ if (x.status === 'Checked') { c.replaceWith(el('div', '✓ ' + x.jobNo + ' ' + x.item + ' — ' + t, 'muted')); setTimeout(rLoadDone, 900); return; } RV.list = RV.list.filter(y => y.id !== x.id); RV.count = Math.max(0, RV.count - 1); rBadge(RV.count); c.replaceWith(Object.assign(el('div', '✓ ' + x.jobNo + ' ' + x.item + ' — ' + t, 'muted'), {})); setTimeout(rRender, 900); }
+$('rF').addEventListener('change', () => { $('rAll').hidden = $('rF').value === 'done'; });
 $('rAll').onclick = async () => { const ids = RV ? RV.list.filter(x => !x.test && !x.flags.length).map(x => x.id) : []; if (!ids.length) { csay('rMsg', 'مفيش سليم مستني', true); return; }
   if ($('rAll').dataset.c !== '1') { $('rAll').dataset.c = '1'; $('rAll').textContent = 'دوس تاني تأكيد (' + ids.length + ')'; setTimeout(() => { $('rAll').dataset.c = ''; $('rAll').textContent = '✓ اعتمد كل السليم'; }, 4000); return; }
   $('rAll').dataset.c = ''; $('rAll').textContent = '✓ اعتمد كل السليم';
