@@ -110,7 +110,7 @@ li:last-child{border-bottom:0}
     <div id="xForm" hidden style="display:flex;flex-direction:column;gap:12px">
       <div class="top"><h1>مصروف جديد</h1><button class="link" id="xBack">رجوع</button></div>
       <div class="card"><b id="xJob"></b><div class="muted" id="xCar"></div></div>
-      <div class="card" id="xDone"><b>اللي اتسجل على العربية دي</b><div class="muted" style="font-size:13px">بص هنا الأول علشان ما تسجلش حاجة اتسجلت قبل كده</div><ul id="xDoneL"><li class="muted">بيحمّل…</li></ul></div>
+      <div class="card" id="xDone"><b>اللي اتسجل على العربية دي</b><div class="muted" style="font-size:13px">بص هنا الأول علشان ما تسجلش حاجة اتسجلت قبل كده — ولو قطعة رجعت للمورد دوس على البند نفسه</div><ul id="xDoneL"><li class="muted">بيحمّل…</li></ul></div>
       <div class="card">
         <label for="xJK" style="margin-top:0">نوع المصروف</label><select id="xJK"></select>
         <div class="muted" id="xJKHint" style="margin-top:6px"></div>
@@ -452,8 +452,10 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
     let t = 0; r.forEach(e => { t += e.cost; const li = document.createElement('li'); li.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:14px';
       const a = document.createElement('span'); a.style.cssText = 'flex:1;min-width:0'; a.textContent = e.date.slice(5).split('-').reverse().join('/') + ' · ' + e.item + (e.qty > 1 ? ' × ' + e.qty : '') + (e.supplier ? ' · ' + e.supplier : '') + ' · ' + e.pay + ' · ' + e.by + (e.returned ? ' · رجع منه ' + Number(e.returned).toLocaleString('en-US') : '');
       const b = document.createElement('b'); b.textContent = Number(e.cost).toLocaleString('en-US'); if (e.cost < 0) b.style.color = '#1E7B4F'; li.append(a, b);
-      if (e.left > 0) { const rb = document.createElement('button'); rb.type = 'button'; rb.className = 'link'; rb.textContent = '↩ مرتجع'; rb.style.cssText = 'font-size:13px;padding:0';
-        rb.onclick = () => { const open = li.querySelector('.retBox'); if (open) { open.remove(); return; } li.append(retBox(e, j)); }; a.append(document.createElement('br'), rb); }
+      if (e.left > 0) { const rb = document.createElement('span'); rb.textContent = '↩ مرتجع'; rb.style.cssText = 'font-size:13px;color:var(--gold,#B8862B);font-weight:600';
+        a.append(document.createElement('br'), rb); li.style.cursor = 'pointer';
+        // tapping the line itself opens its return form (taps inside the form stay in the form)
+        li.onclick = ev => { if (ev.target.closest('.retBox')) return; const open = li.querySelector('.retBox'); if (open) { open.remove(); return; } li.append(retBox(e, j)); }; }
       L.append(li); });
     const li = document.createElement('li'); li.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid var(--line);font-weight:700'; li.innerHTML = '<span>الإجمالي (' + r.length + ' بند)</span><span>' + t.toLocaleString('en-US') + '</span>'; L.append(li); })
    .catch(() => { L.innerHTML = '<li class="muted">ما قدرتش أجيب المصاريف — جرّب تاني</li>'; });
