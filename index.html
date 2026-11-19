@@ -84,7 +84,7 @@ li:last-child{border-bottom:0}
         <label for="pType" style="margin-top:0">نوع المصروف</label><select id="pType"></select>
         <div id="pTextBox" hidden><label for="pText">المصروف ده إيه؟</label><input id="pText" placeholder="مثلاً: مياه للمكتب"></div>
         <label for="pAmt">المبلغ</label><input id="pAmt" inputmode="decimal">
-        <label style="display:flex;gap:8px;align-items:center;color:var(--fg);font-size:14px"><input type="checkbox" id="pOwn" style="width:auto"> دفعتها من جيبي (هستردها)</label>
+        <label for="pFrom">اتدفعت إزاي؟</label><select id="pFrom"><option value="Custody">👜 من عهدتي</option><option value="Ibrahim">🏦 إبراهيم حوّل</option><option value="Employee">💵 من جيبي (هستردها)</option></select>
         <div class="muted" style="margin-top:8px">أي حاجة تخص عربية (بنزين، مواصلات لجيبها، مشوار تجربة، أكل وقت شغلها) سجّلها من «على عربية».</div><select id="pJob" hidden></select>
         <label for="pNote">ملاحظة (لو حابب)</label><input id="pNote">
         <button class="btn" id="pSave">حفظ</button>
@@ -127,9 +127,9 @@ li:last-child{border-bottom:0}
         <div id="xMore"></div>
         <button type="button" class="link" id="xAddLine" style="text-align:start;padding:8px 0">+ بند تاني من نفس المورد</button>
         <div class="muted" id="xTot" style="font-weight:600"></div>
-        <label>كاش ولا أجل؟</label><div class="seg" id="xPay"><button type="button" data-v="Cash">كاش</button><button type="button" data-v="Credit">أجل على المورد</button></div>
         </div>
-        <div id="xFromBox" hidden><label for="xFrom">الكاش اتدفع منين؟</label><select id="xFrom"><option value="Custody">من العهدة</option><option value="Employee">من جيبي (هسترده)</option></select></div>
+        <div id="xFromBox"><label>اتدفع إزاي؟</label><div class="seg" id="xPay" style="grid-auto-flow:row;grid-template-columns:1fr 1fr"><button type="button" data-v="Cash" data-f="Ibrahim">🏦 إبراهيم حوّل</button><button type="button" data-v="Cash" data-f="Custody">👜 من عهدتي</button><button type="button" data-v="Cash" data-f="Employee">💵 من جيبي</button><button type="button" data-v="Credit" data-f="">📒 أجل على المورد</button></div>
+          <input type="hidden" id="xFrom" value=""><div class="muted" id="xPayHint" style="font-size:13px"></div></div>
         <div id="xPartsC"><label for="xSup">المورد</label><select id="xSup"></select>
         <div id="xNew" hidden><div class="row2"><div><label for="xNsName">اسم المورد</label><input id="xNsName"></div><div><label for="xNsPhone">تليفونه</label><input id="xNsPhone" inputmode="tel"></div></div></div></div>
         <label for="xPhoto">📷 صورة الإيصال — صوّر أو اختار من الصور</label><input id="xPhoto" type="file" accept="image/*">
@@ -445,7 +445,7 @@ $('xSup').onchange = () => { $('xNew').hidden = $('xSup').value !== '__new'; };
 function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
   $('xJob').textContent = j.jobNo + ' — ' + j.client; $('xCar').textContent = j.car + (j.plate ? ' · ' + j.plate : '');
   ['xItem','xCost','xNoRec','xNote','xNsName','xNsPhone'].forEach(i => $(i).value = ''); $('xQty').value = '1'; $('xCat').value = 'Parts';
-  $('xPhoto').value = ''; $('xPrev').hidden = true; $('xFromBox').hidden = true; $('xMsg').textContent = ''; $('xMore').textContent = ''; xTot();
+  $('xPhoto').value = ''; $('xPrev').hidden = true; $('xMsg').textContent = ''; $('xMore').textContent = ''; xTot();
   delete $('xItem').dataset.estId; xEstRender(j);
   const L = $('xDoneL'); L.innerHTML = '<li class="muted">بيحمّل…</li>';
   ops('jobExps', j.jobNo).then(r => { L.textContent = ''; if (!r.length) { L.innerHTML = '<li class="muted">لسه مفيش مصاريف متسجلة على العربية دي</li>'; return; }
@@ -459,7 +459,7 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
       L.append(li); });
     const li = document.createElement('li'); li.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid var(--line);font-weight:700'; li.innerHTML = '<span>الإجمالي (' + r.length + ' بند)</span><span>' + t.toLocaleString('en-US') + '</span>'; L.append(li); })
    .catch(() => { L.innerHTML = '<li class="muted">ما قدرتش أجيب المصاريف — جرّب تاني</li>'; });
-  document.querySelectorAll('#xPay button').forEach(b => b.className = ''); xFillSup();
+  document.querySelectorAll('#xPay button').forEach(b => b.className = ''); $('xFrom').value = ''; $('xPayHint').textContent = ''; xFillSup();
   const k = $('xJK'); k.textContent = ''; [['parts','🔩 قطع غيار / ورشة / حاجة من مورد']].concat(XJC.map(x => [x.key, ({fuel:'⛽ ',transport:'🚕 ',test:'🧪 ',food:'🍽 '}[x.key]||'') + x.label + (x.internal ? ' (علينا)' : ' (على العميل)')]))
     .forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; k.append(op); }); k.value = 'parts'; xJKSync(); xView('form'); }
 function xJKSync(){ const quick = $('xJK').value !== 'parts';
@@ -469,7 +469,7 @@ function xJKSync(){ const quick = $('xJK').value !== 'parts';
   $('xPhoto').hidden = internal; $('xPhoto').parentNode.querySelector('label[for=xPhoto]').hidden = internal; if (internal) { $('xPhoto').value = ''; XREC = null; $('xPrev').hidden = true; }
   $('xJKHint').textContent = { fuel: 'بنزين اتحط في عربية العميل نفسها — بيتحسب عليه.', transport: 'مواصلات رايح تجيب العربية أو تسلّمها — بتتحسب على العربية.',
     test: 'مشوار زيادة أو تجربة — علينا إحنا، مش بيطلع للعميل ولا على Asana.', food: 'أكل وقت الشغل على العربية دي — علينا إحنا، مش بيطلع للعميل ولا على Asana.' }[$('xJK').value] || '';
-  if (quick) { XPAY = 'Cash'; $('xFromBox').hidden = false; document.querySelectorAll('#xPay button').forEach(x => x.className = x.dataset.v === 'Cash' ? 'on' : ''); } }
+  document.querySelector('#xPay [data-v=Credit]').hidden = quick; if (quick && XPAY === 'Credit') { XPAY = ''; $('xFrom').value = ''; document.querySelectorAll('#xPay button').forEach(x => x.className = ''); } }
 $('xJK').onchange = xJKSync;
 /* more lines from the same supplier */
 let XCONF = {}; function confirm_(msg, k){ const key = k + '|' + msg; if (XCONF[key]) return true; XCONF = {}; XCONF[key] = 1; $('xMsg').className = 'msg err'; $('xMsg').textContent = msg; return false; }
@@ -554,15 +554,17 @@ $('pSave').onclick = async () => {
   if (!type) return err('اختار نوع المصروف'); if (type === 'other' && !$('pText').value.trim()) return err('اكتب المصروف ده إيه');
   if (!(Number(amount) > 0)) return err('اكتب المبلغ');
   $('pSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
-  try { await ops('pettyAdd', {type, text: $('pText').value.trim(), amount, from: $('pOwn').checked ? 'Employee' : 'Custody', note: $('pNote').value.trim()});
-    ['pAmt','pText','pNote'].forEach(i => $(i).value = ''); $('pType').value = ''; $('pOwn').checked = false; $('pTextBox').hidden = true;
+  try { await ops('pettyAdd', {type, text: $('pText').value.trim(), amount, from: $('pFrom').value, note: $('pNote').value.trim()});
+    ['pAmt','pText','pNote'].forEach(i => $(i).value = ''); $('pType').value = ''; $('pFrom').value = 'Custody'; $('pTextBox').hidden = true;
     m.className = 'msg ok'; m.textContent = '✓ اتسجل'; const r = await ops('myMoney'); xMine(r); }
   catch(e) { err(clean(e.message)); }
   $('pSave').disabled = false;
 };
 $('xBack').onclick = () => { $('xPick').value = ''; xView('list'); };
-document.querySelectorAll('#xPay button').forEach(b => b.onclick = () => { XPAY = b.dataset.v;
-  document.querySelectorAll('#xPay button').forEach(x => x.className = x === b ? 'on' : ''); $('xFromBox').hidden = XPAY !== 'Cash'; });
+// one choice for how it was paid: Ibrahim's transfer (no cash with the team), the custody, his own pocket, or on the supplier's account
+const XPH = { Ibrahim: 'إبراهيم هيحوّل للمورد (أو ليك) ويعلّم إنه حوّل — مفيش كاش معاك.', Custody: 'من العهدة اللي معاك — هتتصفى مع إبراهيم.', Employee: 'دفعت من فلوسك — هتترد لك في التصفية.', '': 'على حساب المورد — إبراهيم بيسدده بعدين.' };
+document.querySelectorAll('#xPay button').forEach(b => b.onclick = () => { XPAY = b.dataset.v; $('xFrom').value = b.dataset.f;
+  document.querySelectorAll('#xPay button').forEach(x => x.className = x === b ? 'on' : ''); $('xPayHint').textContent = XPH[b.dataset.f] || ''; });
 // receipt photo: shrunk on the phone (max 1400px JPEG) so it uploads quickly
 $('xPhoto').onchange = function(){ const f = this.files && this.files[0]; XREC = null; $('xPrev').hidden = true; if (!f) return;
   const img = new Image(), url = URL.createObjectURL(f);
@@ -574,7 +576,7 @@ $('xSave').onclick = async () => {
   const m = $('xMsg'), err = t => { m.className = 'msg err'; m.textContent = t; };
   const kind = $('xJK').value, quick = kind !== 'parts';
   const item = $('xItem').value.trim(), cost = $('xCost').value.trim(); let sup = $('xSup').value;
-  if (quick) { if (!(Number(cost) > 0)) return err('اكتب المبلغ');
+  if (quick) { if (!(Number(cost) > 0)) return err('اكتب المبلغ'); if (!$('xFrom').value) return err('اختار اتدفع إزاي');
     $('xSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
     try { await ops('addExpense', {jobNo: XCUR.jobNo, kind, cost, from: $('xFrom').value, note: $('xNote').value.trim(), receipt: XREC, noReceipt: XREC ? '' : $('xNoRec').value.trim()});
       const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل على ' + no; }
@@ -590,7 +592,7 @@ $('xSave').onclick = async () => {
   // every line with a quantity is asked about together, once: a second tap on save confirms them all
   const qs = lines.map((L, i) => Number(L.qty) > 1 ? (lines.length > 1 ? 'بند ' + (i + 1) + ': ' : '') + 'العدد ' + L.qty + ' — المبلغ ' + L.cost : '').filter(Boolean);
   if (qs.length && !confirm_(qs.join(' · ') + ' — متأكد إن ده الإجمالي مش سعر الواحدة؟ دوس حفظ تاني لو تمام', 'qty|' + qs.join('|'))) return;
-  if (!XPAY) return err('اختار كاش ولا أجل'); if (!sup) return err('اختار المورد');
+  if (!XPAY) return err('اختار اتدفع إزاي'); if (!sup) return err('اختار المورد');
   if (sup === '__new' && (!$('xNsName').value.trim() || $('xNsPhone').value.replace(/\D/g,'').length < 8)) return err('اكتب اسم المورد الجديد ورقم تليفونه');
   if (!XREC && !$('xNoRec').value.trim()) return err('صوّر الإيصال، أو اكتب ليه مفيش إيصال');
   $('xSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
