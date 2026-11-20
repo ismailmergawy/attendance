@@ -8,7 +8,7 @@
 <link rel="manifest" href="alerts.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="LV تنبيهات">
+<meta name="apple-mobile-web-app-title" content="LV Notifications">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap">
 <style>
 :root{--bg:#141A29;--card:#fff;--fg:#151A23;--muted:#5E6675;--line:#DDE1E8;--gold:#A2844A;--ok:#1E7A4F;--bad:#B03A2E}
@@ -54,7 +54,7 @@ async function show() {
   B.textContent = 'بيحمّل…'; let s; try { s = await call('pushStatus'); } catch (e) { PIN = null; try { localStorage.removeItem('alertsPin'); } catch (x) {} login(); say(e.message, true); return; }
   B.textContent = ''; if (!s.ready) { B.append(el('div', 'إشعارات الموبايل لسه مش جاهزة على السيستم.', 'muted')); return; }
   const st = LVPush.state();
-  if (st === 'addHome') B.append(el('div', 'على الآيفون: دوس Share ← Add to Home Screen، وافتح الصفحة من الأيقونة الجديدة «LV تنبيهات»، وارجع هنا.', 'muted'));
+  if (st === 'addHome') B.append(el('div', 'على الآيفون: دوس Share ← Add to Home Screen، وافتح الصفحة من الأيقونة الجديدة «LV Notifications»، وارجع هنا.', 'muted'));
   else if (st === 'on') B.append(el('div', '✅ الموبايل ده بيوصله التنبيهات.', 'muted'), btn('🔔 ابعت إشعار تجربة', async () => { await LVPush.test(call); say('اتبعت — بص على الموبايل'); }), btn('وقّف الإشعارات', async () => { await LVPush.disable(call); show(); }, 'ghost'));
   else B.append(el('div', 'فعّل الإشعارات عشان التنبيهات اللي تخصك توصل على الموبايل.', 'muted'), btn('🔔 فعّل الإشعارات', async () => { await LVPush.enable(call); show(); say('اتفعّلت ✓'); }));
   B.append(btn('خروج', async () => { PIN = null; try { localStorage.removeItem('alertsPin'); } catch (e) {} login(); }, 'link'));
