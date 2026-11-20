@@ -7,4 +7,4 @@ self.FB_CFG = {
   messagingSenderId: "112665551574",
   appId: "1:112665551574:web:9199ec7c2d6e97e00ddf77"
 };
-self.FB_VAPID = '';
+self.FB_VAPID = 'BIRK2N3UrfEKsMRVMzqF7-BB0gIt6DfQuUCARy3j-mzWk1VuMW06pffT0WTdtL8_MaAFbwdytmxpJf4YFzlp4EA';
