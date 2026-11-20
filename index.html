@@ -764,7 +764,10 @@ function cOpen(no){ const j = CJOBS.find(x => x.jobNo === no); if (!j) { CCUR = 
         if (di.value !== dl(j.due && j.due.dueAt)) { p.DueAt = di.value; if (j.due && j.due.dueAt) { if (!ri.value.trim()) { ri.hidden = false; return csay('cjMsg', 'اكتب سبب تغيير معاد التسليم', true); } p.DueReason = ri.value.trim(); } } if (j.status === 'Request' && pi.value !== dl(j.pickupAt)) p.PickupAt = pi.value;
         if (!Object.keys(p).length) return csay('cjMsg', 'مفيش حاجة اتغيرت');
         await ops('setJob', j.jobNo, p); await cRefresh(j.jobNo, 'اتحفظ ✓ — التنبيهات بتوصل على Telegram'); } catch(e){ csay('cjMsg', clean(e.message), true); } });
-    w.append(sv); N.append(w); }
+    const mk = (k, on, txt, done) => { const b = cbtn(on ? '↩ ' + done + ' (' + String(on).slice(5, 16) + ')' : txt, on ? 'ghost' : 'gold', async () => { try { await ops('setJob', j.jobNo, {[k]: !on}); await cRefresh(j.jobNo, on ? 'اتلغت العلامة' : 'اتسجل ✓'); } catch(e){ csay('cjMsg', clean(e.message), true); } }); return b; };
+    const mr = el('div'); mr.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px';
+    mr.append(mk('PickedAt', j.pickedAt, '🚗 ✓ اتستلمت من العميل', 'اتستلمت'), mk('HandedAt', j.handedAt, '🏁 ✓ اتسلمت للعميل', 'اتسلمت'));
+    w.append(sv, mr); N.append(w); }
   cTrip(j);
   const I = $('cjItems'); I.textContent = ''; $('cjEst').hidden = !j.items.length;
   j.items.forEach(x => { const li = el('li'); li.append(el('span', x.item), el('span', x.qty > 1 ? '× ' + x.qty : '', 'muted')); I.append(li); });
