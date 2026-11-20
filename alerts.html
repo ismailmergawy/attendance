@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<title>Luxury VMS — التنبيهات</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141A29">
+<link rel="manifest" href="alerts.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LV تنبيهات">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap">
+<style>
+:root{--bg:#141A29;--card:#fff;--fg:#151A23;--muted:#5E6675;--line:#DDE1E8;--gold:#A2844A;--ok:#1E7A4F;--bad:#B03A2E}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);font-family:"IBM Plex Sans Arabic",Tahoma,sans-serif;color:var(--fg);display:flex;align-items:center;justify-content:center;padding:24px max(16px,env(safe-area-inset-right)) 24px max(16px,env(safe-area-inset-left))}
+.card{background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:380px;display:grid;gap:12px}
+.mark{width:44px;height:44px;border:2px solid var(--gold);border-radius:8px;display:grid;place-items:center;color:var(--gold);font-weight:700;font-family:Arial,sans-serif}
+h1{font-size:18px;margin:0}
+.muted{color:var(--muted);font-size:14px;line-height:1.6}
+input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:18px;text-align:center;letter-spacing:4px}
+button{width:100%;padding:12px;border-radius:10px;border:0;background:var(--gold);color:#fff;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer}
+button.ghost{background:none;color:var(--fg);border:1px solid var(--line)}
+button.link{background:none;color:var(--muted);font-weight:400;padding:4px}
+button:disabled{opacity:.6}
+.msg{font-size:14px;min-height:20px}.msg.ok{color:var(--ok)}.msg.err{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="mark">LV</div>
+  <h1>تنبيهات Luxury VMS على الموبايل</h1>
+  <div id="body"></div>
+  <div class="msg" id="msg"></div>
+</div>
+<script src="push.js"></script>
+<script>
+const OPS = 'https://script.google.com/macros/s/AKfycbxwXpKR8Le67ijMB5piBEgDF5E4WKtxXjlwoPCzjN6bvqEB0wuw2OWakVGGJk5-2FFiKQ/exec';
+let PIN = null; try { PIN = localStorage.getItem('alertsPin'); } catch (e) {}
+const $ = id => document.getElementById(id), B = $('body'), M = $('msg');
+const say = (t, bad) => { M.className = 'msg ' + (bad ? 'err' : 'ok'); M.textContent = t; };
+const el = (tag, txt, cls) => { const x = document.createElement(tag); if (txt) x.textContent = txt; if (cls) x.className = cls; return x; };
+async function call(fn, args) {
+  let r; try { r = await fetch(OPS, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ pin: PIN, fn: fn, args: args === undefined ? [] : [args] }) }); }
+  catch (e) { throw new Error('مفيش اتصال بالإنترنت'); }
+  const j = await r.json(); if (!j.ok) throw new Error(j.error); return j.data;
+}
+const btn = (t, f, cls) => { const b = el('button', t, cls); b.onclick = async () => { b.disabled = true; M.textContent = ''; try { await f(); } catch (e) { say(e.message, true); } b.disabled = false; }; return b; };
+function login() {
+  B.textContent = ''; const i = el('input'); i.type = 'password'; i.inputMode = 'numeric'; i.placeholder = 'الكود'; i.autocomplete = 'off';
+  B.append(el('div', 'ادخل بنفس الكود بتاعك على السيستم.', 'muted'), i, btn('دخول', async () => { PIN = i.value.trim(); await call('pushStatus'); try { localStorage.setItem('alertsPin', PIN); } catch (e) {} show(); }));
+}
+async function show() {
+  B.textContent = 'بيحمّل…'; let s; try { s = await call('pushStatus'); } catch (e) { PIN = null; try { localStorage.removeItem('alertsPin'); } catch (x) {} login(); say(e.message, true); return; }
+  B.textContent = ''; if (!s.ready) { B.append(el('div', 'إشعارات الموبايل لسه مش جاهزة على السيستم.', 'muted')); return; }
+  const st = LVPush.state();
+  if (st === 'addHome') B.append(el('div', 'على الآيفون: دوس Share ← Add to Home Screen، وافتح الصفحة من الأيقونة الجديدة «LV تنبيهات»، وارجع هنا.', 'muted'));
+  else if (st === 'on') B.append(el('div', '✅ الموبايل ده بيوصله التنبيهات.', 'muted'), btn('🔔 ابعت إشعار تجربة', async () => { await LVPush.test(call); say('اتبعت — بص على الموبايل'); }), btn('وقّف الإشعارات', async () => { await LVPush.disable(call); show(); }, 'ghost'));
+  else B.append(el('div', 'فعّل الإشعارات عشان التنبيهات اللي تخصك توصل على الموبايل.', 'muted'), btn('🔔 فعّل الإشعارات', async () => { await LVPush.enable(call); show(); say('اتفعّلت ✓'); }));
+  B.append(btn('خروج', async () => { PIN = null; try { localStorage.removeItem('alertsPin'); } catch (e) {} login(); }, 'link'));
+}
+PIN ? show() : login();
+</script>
+</body>
+</html>

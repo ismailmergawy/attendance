@@ -3,6 +3,10 @@
 <head>
 <title>Luxury VMS — الحضور</title>
 <meta name="theme-color" content="#9A7330">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Luxury VMS">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
@@ -270,14 +274,18 @@ li:last-child{border-bottom:0}
       <div class="msg" id="npMsg"></div>
     </div>
     <div class="card" id="tgCard" hidden>
-      <h2>📲 تنبيهات Telegram</h2>
+      <h2>🔔 إشعارات الموبايل</h2>
+      <div id="pushBody" class="muted">…</div>
+      <div class="msg" id="pushMsg"></div>
+      <h2 style="margin-top:14px">📲 Telegram</h2>
       <div id="tgBody" class="muted">…</div>
       <div class="msg" id="tgMsg"></div>
     </div>
-    <div class="top" style="justify-content:center;gap:18px;flex-wrap:wrap"><button class="link" id="tgOpen">📲 Telegram</button><button class="link" id="pinOpen">🔑 غيّر الرقم السري</button><button class="link" id="logout">مش إنت؟ خروج</button></div>
+    <div class="top" style="justify-content:center;gap:18px;flex-wrap:wrap"><button class="link" id="tgOpen">🔔 التنبيهات</button><button class="link" id="pinOpen">🔑 غيّر الرقم السري</button><button class="link" id="logout">مش إنت؟ خروج</button></div>
   </section>
 </div>
 
+<script src="push.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const LBL = {Annual:'Annual',Casual:'Casual',Sick:'Sick',EarlyLeave:'يمشي بدري',Advance:'💵 سلفة'};
@@ -335,7 +343,18 @@ $('loginBtn').onclick = async () => {
   PIN = p; savePin(p); await load(); $('loginBtn').disabled = false;
 };
 // 📲 link this person's Telegram once: open the bot, press Start, come back and tap «خلصت»
-$('tgOpen').onclick = () => { const c = $('tgCard'); c.hidden = !c.hidden; if (!c.hidden) tgShow(); };
+$('tgOpen').onclick = () => { const c = $('tgCard'); c.hidden = !c.hidden; if (!c.hidden) { tgShow(); pushShow(); } };
+// 🔔 notifications on this phone (works from the icon on the home screen)
+function pushShow() {
+  const B = $('pushBody'), m = $('pushMsg'), say = (t, bad) => { m.className = 'msg ' + (bad ? 'err' : 'ok'); m.textContent = t; };
+  const b = (t, f, cls) => { const x = document.createElement('button'); x.className = cls || 'btn'; x.textContent = t; x.onclick = async () => { x.disabled = true; try { await f(); } catch (e) { say(clean(e.message), true); } x.disabled = false; }; return x; };
+  const p = t => { const d = document.createElement('div'); d.textContent = t; return d; };
+  B.textContent = ''; m.textContent = ''; if (!window.LVPush) { B.append(p('…')); return; }
+  const st = LVPush.state();
+  if (st === 'on') { B.append(p('✅ الموبايل ده بيوصله إشعارات.'), b('🔔 ابعت إشعار تجربة', async () => { await LVPush.test(ops); say('اتبعت — بص على الموبايل'); }), b('وقّف الإشعارات', async () => { await LVPush.disable(ops); pushShow(); }, 'link')); return; }
+  if (st === 'addHome') { B.append(p('على الآيفون الإشعارات بتشتغل من الأيقونة بس: من Safari دوس Share ← Add to Home Screen، وافتح الصفحة من الأيقونة الجديدة، وارجع هنا.')); return; }
+  B.append(p('فعّل الإشعارات عشان التنبيهات اللي تخصك توصل على الموبايل زي أي برنامج.'), b('🔔 فعّل الإشعارات', async () => { await LVPush.enable(ops); pushShow(); say('اتفعّلت ✓'); }));
+}
 async function tgShow(st) {
   const B = $('tgBody'), m = $('tgMsg'); m.textContent = ''; m.className = 'msg';
   try { st = st || await ops('tgStatus'); } catch (e) { B.textContent = clean(e.message); return; }
