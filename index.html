@@ -196,6 +196,12 @@ li:last-child{border-bottom:0}
 
   <section id="main" hidden style="display:flex;flex-direction:column;gap:16px">
     <div class="top"><h1>حضور وانصراف</h1><span class="who" id="who"></span></div>
+    <div class="card" id="pushNag" hidden style="border:1.5px solid var(--accent)">
+      <h2>🔔 فعّل إشعارات الموبايل</h2>
+      <div class="muted" id="pushNagTxt"></div>
+      <div id="pushNagAct" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"></div>
+      <div class="msg" id="pushNagMsg"></div>
+    </div>
     <div><div class="clock" id="clock">--:--</div><div class="muted" id="date"></div></div>
 
     <button class="act in" id="act">Check-in</button>
@@ -316,7 +322,7 @@ async function load(){
   try {
     const s = await call('empState', PIN);
     show('main');
-    $('who').textContent = s.name; cProbe();
+    $('who').textContent = s.name; cProbe(); pushNag();
     const b = $('act'); b.className = 'act ' + s.next; b.textContent = s.next === 'in' ? 'Check-in' : 'Check-out'; b.disabled = false;
     $('sIn').textContent = t12(s.today.firstIn) || '—';
     $('sOut').textContent = t12(s.today.lastOut) || '—';
@@ -344,6 +350,20 @@ $('loginBtn').onclick = async () => {
 };
 // 📲 link this person's Telegram once: open the bot, press Start, come back and tap «خلصت»
 $('tgOpen').onclick = () => { const c = $('tgCard'); c.hidden = !c.hidden; if (!c.hidden) { tgShow(); pushShow(); } };
+// a card on top until this phone gets notifications (hide it for today with «بعدين»)
+function pushNag() {
+  const C = $('pushNag'); if (!window.LVPush) return; const st = LVPush.state(), today = new Date().toISOString().slice(0, 10);
+  let later = ''; try { later = localStorage.getItem('pushNagLater') || ''; } catch (e) {}
+  if (st === 'on' || st === 'unsupported' || later === today) { C.hidden = true; return; }
+  const T = $('pushNagTxt'), A = $('pushNagAct'), M = $('pushNagMsg'); A.textContent = ''; M.textContent = '';
+  const b = (t, f, cls) => { const x = document.createElement('button'); x.className = cls || 'btn'; x.textContent = t; x.onclick = f; return x; };
+  if (st === 'addHome') T.textContent = 'عشان التنبيهات توصلك: دوس زرار المشاركة تحت (المربع اللي طالع منه سهم) ← Add to Home Screen ← Add. وبعدين افتح الصفحة من الأيقونة الجديدة «LV Attendance».';
+  else if (st === 'denied') T.textContent = 'الإشعارات مقفولة للصفحة دي. افتحها من Settings ← Notifications ← LV Attendance.';
+  else { T.textContent = 'التنبيهات اللي تخصك (تحويلات، مواعيد، مصاريف) هتوصلك على الموبايل زي أي برنامج.';
+    A.append(b('🔔 فعّل الإشعارات', async (e) => { e.target.disabled = true; try { await LVPush.enable(ops); M.className = 'msg ok'; M.textContent = '✓ اتفعّلت'; setTimeout(() => C.hidden = true, 1500); } catch (x) { M.className = 'msg err'; M.textContent = clean(x.message); } e.target.disabled = false; })); }
+  A.append(b('بعدين', () => { try { localStorage.setItem('pushNagLater', today); } catch (e) {} C.hidden = true; }, 'btn ghost'));
+  C.hidden = false;
+}
 // 🔔 notifications on this phone (works from the icon on the home screen)
 function pushShow() {
   const B = $('pushBody'), m = $('pushMsg'), say = (t, bad) => { m.className = 'msg ' + (bad ? 'err' : 'ok'); m.textContent = t; };
