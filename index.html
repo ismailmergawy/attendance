@@ -649,6 +649,9 @@ function cView(v){ ['cList','cJob','cChk','cEst'].forEach(x => $(x).hidden = x !
 function money(n){ return Number(n || 0).toLocaleString('en-US', {maximumFractionDigits:2}); }
 async function cProbe(){ if (CPROBED) return; CPROBED = true;
   try { const r = await ops('staffHome'); CPHASE = r.phase || 1; CJOBS = r.jobs; $('tCar').hidden = CPHASE === 1; rBadge(r.rev); bgPull(); } catch(e){ CPROBED = false; } }
+// the alert clock: every open page nudges the server every few minutes (the server does each hour's work once)
+let TKT = 0; function tickNow(){ if (!PIN || document.hidden || Date.now() - TKT < 300000) return; TKT = Date.now(); ops('tick').catch(() => {}); }
+setInterval(tickNow, 60000); document.addEventListener('visibilitychange', tickNow);
 let BGP = 0; function bgPull(){ if (Date.now() - BGP < 180000) return; BGP = Date.now(); ops('bgPull').then(r => { if (r && r.added && TAB === 'car') cLoad(); }).catch(() => {}); }
 async function cLoad(){ bgPull(); cView('cList'); if (!CJOBS.length) csay('cMsg', 'بيحمّل…');
   try { const r = await ops('staffHome'); CJOBS = r.jobs; CPHASE = r.phase || 1; csay('cMsg', ''); cRender(); return r; } catch(e){ csay('cMsg', clean(e.message), true); } }
@@ -741,10 +744,27 @@ function cOpen(no){ const j = CJOBS.find(x => x.jobNo === no); if (!j) { CCUR = 
   if (j.asana) a.append(cbtn(j.draft ? '📝 كمّل المقايسة (' + j.draft + ')' : '📝 مقايسة', 'ghost', () => cEstOpen(j)));
   else if (j.status === 'Working' || j.status === 'ClientApproved') a.append(cbtn('+ مقايسة إضافية', 'ghost', () => cEstOpen(j))); else a.style.gridTemplateColumns = '1fr';
   N.append(a); const mn = cMoney(j); if (mn) N.append(mn);
-  if (j.canBudget) { const w = el('div'); w.style.marginTop = '8px'; const l = el('label', '💰 حد التكلفة المتفق عليه مع العميل'); l.htmlFor = 'cjCap'; const i = el('input'); i.id = 'cjCap'; i.inputMode = 'decimal';
-    i.value = j.budget && j.budget.cap ? j.budget.cap : ''; i.placeholder = 'مثلاً 25000';
-    const sv = cbtn('حفظ الحد', 'ghost', async () => { try { await ops('setJob', j.jobNo, {Budget: i.value.trim()}); await cRefresh(j.jobNo, i.value.trim() ? 'اتحفظ الحد — إسماعيل بيجيله تنبيه عند 80% و100%' : 'اتشال الحد'); } catch(e){ csay('cjMsg', clean(e.message), true); } });
-    w.append(l, i, sv); N.append(w); }
+  if (j.canBudget) { const w = el('div'); w.style.cssText = 'margin-top:10px;display:grid;gap:6px';
+    const lab = (t, id) => { const l = el('label', t); l.htmlFor = id; return l; };
+    const qi = el('input'); qi.id = 'cjQuote'; qi.inputMode = 'decimal'; qi.value = j.quote || ''; qi.placeholder = 'مثلاً 30000';
+    const tw = el('label'); tw.style.cssText = 'display:flex;gap:8px;align-items:center;font-weight:400'; const tx = el('input'); tx.type = 'checkbox'; tx.style.width = 'auto'; tx.checked = !!j.quoteTax; tw.append(tx, document.createTextNode('المبلغ ده شامل الضريبة 14%'));
+    const capL = el('div', '', 'muted'); const capOf = () => { const q = Number(String(qi.value).replace(/,/g, '')) || 0; return Math.round(q / (tx.checked ? 1.14 : 1) * (j.costRatio || 75) / 100); };
+    const upd = () => { const c = capOf(); capL.textContent = c ? '🎯 سقف التكلفة بتاعنا: ' + money(c) + ' (' + (j.costRatio || 75) + '% من المبلغ قبل الضريبة) — بيجيلكم تنبيه لما المصاريف تقرب منه' : 'اكتب المبلغ اللي اتبلغ للعميل والسيستم يحسب سقف التكلفة'; };
+    qi.oninput = tx.onchange = upd; upd();
+    const dl = s => String(s || '').replace(' ', 'T').slice(0, 16);
+    const di = el('input'); di.id = 'cjDue'; di.type = 'datetime-local'; di.value = dl(j.due && j.due.dueAt);
+    const pi = el('input'); pi.id = 'cjPick'; pi.type = 'datetime-local'; pi.value = dl(j.pickupAt);
+    w.append(lab('💰 المبلغ اللي اتبلغ للعميل', 'cjQuote'), qi, tw, capL);
+    if (j.status === 'Request') w.append(lab('🚗 معاد الاستلام من العميل', 'cjPick'), pi);
+    const ri = el('input'); ri.id = 'cjDueWhy'; ri.placeholder = 'ليه المعاد اتغير؟ (العميل هيعرف)'; ri.hidden = true;
+    di.onchange = () => { ri.hidden = !(j.due && j.due.dueAt) || di.value === dl(j.due.dueAt); };
+    w.append(lab('🏁 معاد التسليم للعميل', 'cjDue'), di, ri);
+    const sv = cbtn('حفظ', 'ghost', async () => { try { const p = {}; const qv = qi.value.replace(/,/g, '').trim();
+        if (qv !== String(j.quote || '') || tx.checked !== !!j.quoteTax) { p.Quote = qv; p.QuoteTax = tx.checked; }
+        if (di.value !== dl(j.due && j.due.dueAt)) { p.DueAt = di.value; if (j.due && j.due.dueAt) { if (!ri.value.trim()) { ri.hidden = false; return csay('cjMsg', 'اكتب سبب تغيير معاد التسليم', true); } p.DueReason = ri.value.trim(); } } if (j.status === 'Request' && pi.value !== dl(j.pickupAt)) p.PickupAt = pi.value;
+        if (!Object.keys(p).length) return csay('cjMsg', 'مفيش حاجة اتغيرت');
+        await ops('setJob', j.jobNo, p); await cRefresh(j.jobNo, 'اتحفظ ✓ — التنبيهات بتوصل على Telegram'); } catch(e){ csay('cjMsg', clean(e.message), true); } });
+    w.append(sv); N.append(w); }
   cTrip(j);
   const I = $('cjItems'); I.textContent = ''; $('cjEst').hidden = !j.items.length;
   j.items.forEach(x => { const li = el('li'); li.append(el('span', x.item), el('span', x.qty > 1 ? '× ' + x.qty : '', 'muted')); I.append(li); });
