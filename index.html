@@ -269,7 +269,12 @@ li:last-child{border-bottom:0}
       <button class="btn" id="npSave">تغيير</button>
       <div class="msg" id="npMsg"></div>
     </div>
-    <div class="top" style="justify-content:center;gap:18px"><button class="link" id="pinOpen">🔑 غيّر الرقم السري</button><button class="link" id="logout">مش إنت؟ خروج</button></div>
+    <div class="card" id="tgCard" hidden>
+      <h2>📲 تنبيهات Telegram</h2>
+      <div id="tgBody" class="muted">…</div>
+      <div class="msg" id="tgMsg"></div>
+    </div>
+    <div class="top" style="justify-content:center;gap:18px;flex-wrap:wrap"><button class="link" id="tgOpen">📲 Telegram</button><button class="link" id="pinOpen">🔑 غيّر الرقم السري</button><button class="link" id="logout">مش إنت؟ خروج</button></div>
   </section>
 </div>
 
@@ -329,6 +334,23 @@ $('loginBtn').onclick = async () => {
   $('loginBtn').disabled = true; $('loginMsg').textContent = '';
   PIN = p; savePin(p); await load(); $('loginBtn').disabled = false;
 };
+// 📲 link this person's Telegram once: open the bot, press Start, come back and tap «خلصت»
+$('tgOpen').onclick = () => { const c = $('tgCard'); c.hidden = !c.hidden; if (!c.hidden) tgShow(); };
+async function tgShow(st) {
+  const B = $('tgBody'), m = $('tgMsg'); m.textContent = ''; m.className = 'msg';
+  try { st = st || await ops('tgStatus'); } catch (e) { B.textContent = clean(e.message); return; }
+  B.textContent = '';
+  const b = (t, f, cls) => { const x = document.createElement('button'); x.className = cls || 'btn'; x.textContent = t; x.onclick = f; return x; };
+  const p = t => { const d = document.createElement('div'); d.textContent = t; return d; };
+  if (!st.bot) { B.append(p('البوت لسه متربطش — استنى إسماعيل يربطه.')); return; }
+  if (st.linked) { B.append(p('✅ إنت مربوط — التنبيهات اللي تخصك بتوصلك على Telegram.'),
+      b('🔔 ابعت رسالة تجربة', async () => { try { await ops('tgTest'); m.className = 'msg ok'; m.textContent = 'اتبعتت — شوف Telegram'; } catch (e) { m.className = 'msg err'; m.textContent = clean(e.message); } }),
+      b('فك الربط', async () => tgShow(await ops('tgUnlink')), 'link')); return; }
+  B.append(p('1) دوس «افتح Telegram». 2) في البوت دوس Start. 3) ارجع هنا ودوس «خلصت».'));
+  const a = document.createElement('a'); a.className = 'btn'; a.textContent = 'افتح Telegram'; a.target = '_blank'; a.rel = 'noopener'; a.style.display = 'block'; a.style.textAlign = 'center'; a.href = '#'; B.append(a);
+  ops('tgLink').then(L => a.href = L.url).catch(e => { m.className = 'msg err'; m.textContent = clean(e.message); });
+  B.append(b('خلصت ✓', async () => { const s2 = await ops('tgCheck').catch(e => ({ err: e })); if (s2.linked) { tgShow(s2); } else { m.className = 'msg err'; m.textContent = s2.err ? clean(s2.err.message) : 'لسه مش لاقي — اتأكد إنك دوست Start وجرب تاني'; } }, 'btn ghost'));
+}
 $('pinOpen').onclick = () => { $('pinCard').hidden = !$('pinCard').hidden; $('np1').value = $('np2').value = ''; $('npMsg').textContent = ''; };
 $('npSave').onclick = async () => {
   const a = $('np1').value.trim(), b = $('np2').value.trim(), m = $('npMsg'), err = t => { m.className = 'msg err'; m.textContent = t; };
