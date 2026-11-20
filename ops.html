@@ -7,15 +7,20 @@
 <meta name="theme-color" content="#141A29">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
+<link rel="manifest" href="ops.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="LV Operations">
 <style>body{margin:0;min-height:100vh;background:#141A29;color:#A2844A;font-family:Tahoma,sans-serif;display:grid;place-items:center;text-align:center}a{color:#A2844A}</style>
 </head>
 <body>
 <div><div style="font:700 28px Arial;border:2px solid #A2844A;border-radius:8px;width:56px;height:56px;display:grid;place-items:center;margin:0 auto 16px">LV</div>
-<div>بيفتح صفحة الإدارة… <a id="go" href="https://script.google.com/macros/s/AKfycbxwXpKR8Le67ijMB5piBEgDF5E4WKtxXjlwoPCzjN6bvqEB0wuw2OWakVGGJk5-2FFiKQ/exec?page=admin">افتح</a></div></div>
+<div>بيفتح صفحة الإدارة… <a id="go" style="display:inline-block;margin-top:8px;padding:10px 18px;border:1px solid #A2844A;border-radius:10px;text-decoration:none" href="https://script.google.com/macros/s/AKfycbxwXpKR8Le67ijMB5piBEgDF5E4WKtxXjlwoPCzjN6bvqEB0wuw2OWakVGGJk5-2FFiKQ/exec?page=admin">افتح</a></div><div id="tip" hidden style="margin-top:18px;color:#cfd3dc;font-size:14px;line-height:1.8;max-width:300px">عشان تضيفها للموبايل: دوس Share ← Add to Home Screen ← Add.<br>من الأيقونة هتفتح الصفحة على طول.</div></div>
 <script>
 // launcher for the home screen: the admin page lives on Google, which can't carry our icon
-if (!/[?&]stay/.test(location.search)) setTimeout(function () { location.replace(document.getElementById('go').href); }, 1200);
+// only jump from the home-screen icon; in Safari stay here so Share → Add to Home Screen takes this page (and its icon)
+var home = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+if (home) location.replace(document.getElementById('go').href);
+else document.getElementById('tip').hidden = false;
 </script>
 </body>
 </html>
