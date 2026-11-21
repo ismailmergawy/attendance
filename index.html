@@ -88,7 +88,7 @@ li:last-child{border-bottom:0}
         <label for="pType" style="margin-top:0">نوع المصروف</label><select id="pType"></select>
         <div id="pTextBox" hidden><label for="pText">المصروف ده إيه؟</label><input id="pText" placeholder="مثلاً: مياه للمكتب"></div>
         <label for="pAmt">المبلغ</label><input id="pAmt" inputmode="decimal">
-        <label for="pFrom">اتدفعت إزاي؟</label><select id="pFrom"><option value="Custody">👜 من عهدتي</option><option value="Ibrahim">🏦 إبراهيم حوّل</option><option value="Employee">💵 من جيبي (هستردها)</option></select>
+        <label for="pFrom">اتدفعت إزاي؟</label><select id="pFrom"><option value="Custody">👜 من عهدتي</option><option value="Ibrahim">🏦 تحويل من دكتور إبراهيم</option><option value="Employee">💵 من جيبي (هستردها)</option></select>
         <div class="muted" style="margin-top:8px">أي حاجة تخص عربية (بنزين، مواصلات لجيبها، مشوار تجربة، أكل وقت شغلها) سجّلها من «على عربية».</div><select id="pJob" hidden></select>
         <label for="pNote">ملاحظة (لو حابب)</label><input id="pNote">
         <button class="btn" id="pSave">حفظ</button>
@@ -132,10 +132,10 @@ li:last-child{border-bottom:0}
         <button type="button" class="link" id="xAddLine" style="text-align:start;padding:8px 0">+ بند تاني من نفس المورد</button>
         <div class="muted" id="xTot" style="font-weight:600"></div>
         </div>
-        <div id="xFromBox"><label>اتدفع إزاي؟</label><div class="seg" id="xPay" style="grid-auto-flow:row;grid-template-columns:1fr 1fr"><button type="button" data-v="Cash" data-f="Ibrahim">🏦 إبراهيم حوّل</button><button type="button" data-v="Cash" data-f="Custody">👜 من عهدتي</button><button type="button" data-v="Cash" data-f="Employee">💵 من جيبي</button><button type="button" data-v="Credit" data-f="">📒 أجل على المورد</button></div>
+        <div id="xFromBox"><label>اتدفع إزاي؟</label><div class="seg" id="xPay" style="grid-auto-flow:row;grid-template-columns:1fr 1fr"><button type="button" data-v="Cash" data-f="Ibrahim">🏦 تحويل من دكتور إبراهيم</button><button type="button" data-v="Cash" data-f="Custody">👜 من عهدتي</button><button type="button" data-v="Cash" data-f="Employee">💵 من جيبي</button><button type="button" data-v="Credit" data-f="">📒 أجل على المورد</button></div>
           <input type="hidden" id="xFrom" value=""><div class="muted" id="xPayHint" style="font-size:13px"></div></div>
         <div id="xPartsC"><label for="xSup">المورد</label><select id="xSup"></select>
-        <div id="xNew" hidden><div class="row2"><div><label for="xNsName">اسم المورد</label><input id="xNsName"></div><div><label for="xNsPhone">تليفونه</label><input id="xNsPhone" inputmode="tel"></div></div></div></div>
+        <div id="xNew" hidden><div class="row2"><div><label for="xNsName">اسم المورد</label><input id="xNsName"></div><div><label for="xNsPhone">تليفونه (لو موجود)</label><input id="xNsPhone" inputmode="tel"></div></div></div></div>
         <label for="xPhoto">📷 صورة الإيصال — صوّر أو اختار من الصور</label><input id="xPhoto" type="file" accept="image/*">
         <img id="xPrev" alt="" hidden style="max-height:160px;border-radius:8px;margin-top:8px">
         <label for="xNoRec">مفيش إيصال؟ اكتب ليه</label><input id="xNoRec">
@@ -461,6 +461,10 @@ function salShow(r){ const B = $('salBox'); B.textContent = ''; B.className = ''
   const st = document.createElement('div'); st.className = 'stats';
   [['اتقبض الشهر ده', n(r.monthPaid)], ['باقي من السلف', n(r.advLeft)]].forEach(x => { const d = document.createElement('div'); d.className = 'stat'; const a = document.createElement('span'); a.textContent = x[0]; const b = document.createElement('b'); b.textContent = x[1]; d.append(a, b); st.append(d); });
   B.append(st);
+  if (r.adj && r.adj.length) { const w = document.createElement('div'); w.style.cssText = 'border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0;font-size:13.5px';
+    const t = document.createElement('b'); t.textContent = '🎁 Bonus وخصومات الشهر ده'; w.append(t);
+    r.adj.forEach(x => { const d = document.createElement('div'); d.textContent = x.date.slice(8) + '/' + +x.date.slice(5, 7) + ' · ' + (x.type === 'Bonus' ? '+' : '-') + n(x.amount) + ' · ' + (x.type === 'Bonus' ? 'Bonus' : 'خصم') + (x.reason ? ' — ' + x.reason : ''); d.style.color = x.type === 'Bonus' ? 'var(--ok,#1E7A4F)' : 'var(--bad,#B03A2E)'; w.append(d); });
+    const f = document.createElement('div'); f.className = 'muted'; f.textContent = 'الـ Bonus بيتصرف يوم 1 مع الـ Over Time.'; w.append(f); B.append(w); }
   if (!r.pays.length) { const e = document.createElement('div'); e.className = 'muted'; e.textContent = 'لسه مفيش مرتبات اتسجل إنها اتصرفت.'; B.append(e); }
   r.pays.forEach(p => { const c = document.createElement('div'); c.style.cssText = 'border-top:1px solid var(--line);padding:8px 0;font-size:13.5px';
     const h = document.createElement('div'); h.style.cssText = 'display:flex;justify-content:space-between;font-weight:600'; const a = document.createElement('span'); const dm = x => { const m = String(x || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? +m[3] + '/' + +m[2] : x; }; a.textContent = 'اتقبض ' + dm(p.at) + (p.period ? ' — أسبوع ' + dm(p.period) : ''); const b = document.createElement('span'); b.textContent = n(p.amount) + ' جنيه'; h.append(a, b);
@@ -521,7 +525,7 @@ function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
     const li = document.createElement('li'); li.style.cssText = 'display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid var(--line);font-weight:700'; li.innerHTML = '<span>الإجمالي (' + r.length + ' بند)</span><span>' + t.toLocaleString('en-US') + '</span>'; L.append(li); })
    .catch(() => { L.innerHTML = '<li class="muted">ما قدرتش أجيب المصاريف — جرّب تاني</li>'; });
   document.querySelectorAll('#xPay button').forEach(b => b.className = ''); $('xFrom').value = ''; $('xPayHint').textContent = ''; xFillSup();
-  const k = $('xJK'); k.textContent = ''; [['parts','🔩 قطع غيار / ورشة / حاجة من مورد']].concat(XJC.map(x => [x.key, ({fuel:'⛽ ',transport:'🚕 ',test:'🧪 ',food:'🍽 '}[x.key]||'') + x.label + (x.internal ? ' (علينا)' : ' (على العميل)')]))
+  const k = $('xJK'); k.textContent = ''; [['parts','🔩 قطع غيار / ورشة / حاجة من مورد']].concat(XJC.map(x => [x.key, ({tip:'💵 ',fuel:'⛽ ',transport:'🚕 ',test:'🧪 ',food:'🍽 '}[x.key]||'') + x.label + (x.internal ? ' (علينا)' : ' (على العميل)')]))
     .forEach(o => { const op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; k.append(op); }); k.value = 'parts'; xJKSync(); xView('form'); }
 function xJKSync(){ const quick = $('xJK').value !== 'parts';
   ['xPartsA','xPartsB','xPartsC','xQtyBox','xMore','xAddLine','xTot'].forEach(i => $(i).hidden = quick); $('xEst').hidden = quick || !((XCUR && XCUR.items && XCUR.items.length) || (XCUR && XCUR.budget));
@@ -623,7 +627,7 @@ $('pSave').onclick = async () => {
 };
 $('xBack').onclick = () => { $('xPick').value = ''; xView('list'); };
 // one choice for how it was paid: Ibrahim's transfer (no cash with the team), the custody, his own pocket, or on the supplier's account
-const XPH = { Ibrahim: 'إبراهيم هيحوّل للمورد (أو ليك) ويعلّم إنه حوّل — مفيش كاش معاك.', Custody: 'من العهدة اللي معاك — هتتصفى مع إبراهيم.', Employee: 'دفعت من فلوسك — هتترد لك في التصفية.', '': 'على حساب المورد — إبراهيم بيسدده بعدين.' };
+const XPH = { Ibrahim: 'دكتور إبراهيم هيحوّل للمورد (أو ليك) ويعلّم إنه حوّل — مفيش كاش معاك.', Custody: 'من العهدة اللي معاك — هتتصفى مع دكتور إبراهيم.', Employee: 'دفعت من فلوسك — هتترد لك في التصفية.', '': 'على حساب المورد — دكتور إبراهيم بيسدده بعدين.' };
 document.querySelectorAll('#xPay button').forEach(b => b.onclick = () => { XPAY = b.dataset.v; $('xFrom').value = b.dataset.f;
   document.querySelectorAll('#xPay button').forEach(x => x.className = x === b ? 'on' : ''); $('xPayHint').textContent = XPH[b.dataset.f] || ''; });
 // receipt photo: shrunk on the phone (max 1400px JPEG) so it uploads quickly
@@ -654,7 +658,8 @@ $('xSave').onclick = async () => {
   const qs = lines.map((L, i) => Number(L.qty) > 1 ? (lines.length > 1 ? 'بند ' + (i + 1) + ': ' : '') + 'العدد ' + L.qty + ' — المبلغ ' + L.cost : '').filter(Boolean);
   if (qs.length && !confirm_(qs.join(' · ') + ' — متأكد إن ده الإجمالي مش سعر الواحدة؟ دوس حفظ تاني لو تمام', 'qty|' + qs.join('|'))) return;
   if (!XPAY) return err('اختار اتدفع إزاي'); if (!sup) return err('اختار المورد');
-  if (sup === '__new' && (!$('xNsName').value.trim() || $('xNsPhone').value.replace(/\D/g,'').length < 8)) return err('اكتب اسم المورد الجديد ورقم تليفونه');
+  if (sup === '__new' && !$('xNsName').value.trim()) return err('اكتب اسم المورد الجديد');
+  if (sup === '__new' && $('xNsPhone').value.trim() && $('xNsPhone').value.replace(/\D/g,'').length < 8) return err('رقم تليفون المورد ناقص — صححه أو سيبه فاضي');
   if (!XREC && !$('xNoRec').value.trim()) return err('صوّر الإيصال، أو اكتب ليه مفيش إيصال');
   $('xSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
   try {
