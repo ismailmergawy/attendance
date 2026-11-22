@@ -1,0 +1,37 @@
+/* ---------- 👤 employee profile: a day, a week or a month of one employee — every day opens to its punches, Overtime, Bonus/خصم and what he spent (from Operations) ---------- */
+const OPS_SS_ = '1pfeTChCtIV1RZKyjJRbjkXUL3xonTaJ0fsV0wBRbyZ0';
+function proKey_(s) { return String(s || '').toLowerCase().replace(/[^a-z؀-ۿ]/g, ''); }
+function proOps_(name, from, to) {
+  const O = SpreadsheetApp.openById(OPS_SS_), tab = n => { const s = O.getSheetByName(n); if (!s) return []; const v = s.getDataRange().getValues(), h = v.shift().map(x => String(x).trim());
+    return v.map(r => { const o = {}; h.forEach((k, i) => o[k] = r[i] instanceof Date ? Utilities.formatDate(r[i], TZ, 'yyyy-MM-dd HH:mm') : r[i]); return o; }); };
+  const k = proKey_(name), inR = d => { d = String(d || '').slice(0, 10); return d >= from && d <= to; }, J = {}; tab('Jobs').forEach(j => J[j.JobNo] = j);
+  const FROM = { Ibrahim: 'تحويل من دكتور إبراهيم', Custody: 'من العهدة', Employee: 'من جيبه', Owner: 'من إسماعيل', Credit: 'أجل' };
+  const ex = tab('Expenses').filter(x => proKey_(x.By) === k && x.Status !== 'Void' && inR(x.Date)).map(x => { const j = J[x.JobNo];
+    return { date: String(x.Date).slice(0, 10), at: String(x.At || '').slice(11, 16), jobNo: x.JobNo || '', car: j ? (j.Client || '') + ' — ' + [j.Make, j.Model].filter(Boolean).join(' ') : '', item: x.Item || '', supplier: x.Supplier || '', from: FROM[x.PaidFrom] || (x.Pay === 'Credit' ? 'أجل' : ''), amount: num_(x.Cost) }; });
+  const oh = tab('Overheads').filter(o => proKey_(o.By) === k && /^Staff:/.test(String(o.Source)) && inR(o.Date)).map(o => ({ date: String(o.Date).slice(0, 10), at: String(o.At || '').slice(11, 16), jobNo: '', car: 'مصاريف عامة', item: o.Item || o.Sub || o.Cat || '', supplier: '', from: FROM[String(o.Source).split(':')[1]] || '', amount: num_(o.Amount) }));
+  return ex.concat(oh);
+}
+function empPro(pin, empId, from, to) {
+  const a = admin_(pin), e = rows_('Employees').find(r => r.ID === empId); if (!e) throw new Error('الموظف مش موجود');
+  const ok = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')); to = ok(to) ? to : today_(); from = ok(from) ? from : to; if (from > to) { const x = from; from = to; to = x; }
+  const S = settings_(), B = build_(from, to), inR = d => { d = String(d || '').slice(0, 10); return d >= from && d <= to; };
+  let spend = [], spendErr = ''; try { spend = proOps_(e.Name, from, to); } catch (x) { spendErr = String(x.message || x); }
+  const days = range_(from, to).map(d => { const x = day_(e, d, B), c = cell_(e, x, B, d);
+    const P = (B.att[e.ID + '|' + d] || []).filter(r => r.Type === 'in' || r.Type === 'out').sort((p, q) => num_(p.Epoch) - num_(q.Epoch)).map(r => ({ type: r.Type, time: r.Time, map: String(r.Map || '').split(' | ')[0], manual: String(r.Map || '').indexOf('Manual') === 0 }));
+    const A = (B.adj[e.ID + '|' + d] || []).filter(r => r.ID).map(r => ({ id: r.ID, type: r.Type, amount: num_(r.Amount), reason: r.Reason || '', by: r.By || '' }));
+    return Object.assign(c, { bonus: r2_(x.bonus), grant: r2_(x.grant), deduction: r2_(x.deduction), absent: !!x.absent, leave: x.leave || '', isOff: !!x.isOff, future: d > today_(), punches: P, adj: A, spend: spend.filter(s => s.date === d) }); });
+  const sum = (L, f) => r2_(L.reduce((t, x) => t + num_(f(x)), 0));
+  const pays = rows_('Payments').filter(p => p.EmpID === e.ID && inR(p.PaidAt) && num_(p.Amount)).map(p => ({ at: String(p.PaidAt).slice(0, 10), kind: p.Kind, period: p.Period, amount: num_(p.Amount), details: p.Details || '' }));
+  const advs = rows_('Advances').filter(r => r.EmpID === e.ID).slice(-10).reverse().map(r => ({ date: r.Date, amount: num_(r.Amount), inst: num_(r.Installment), reason: r.Reason || '' }));
+  const reqs = rows_('Requests').filter(r => r.EmpID === e.ID).slice(-10).reverse().map(r => ({ type: r.Type, from: r.From, to: r.To, days: r.Days, status: r.Status || 'Pending', reason: r.Reason || '' }));
+  const viewer = a.Role === 'Viewer';
+  return { emp: { id: e.ID, name: e.Name, job: e.Job || '', phone: e.Phone || '', dayOff: e.DayOff || '', start: lat_(e, S), end: e.EndTime || '', hours: wh_(e, S), mode: e.Mode || '', salary: viewer ? '' : num_(e.Salary), hire: e.HireDate || '', notes: e.Notes || '' },
+    from: from, to: to, today: today_(), canEdit: !viewer, days: days, spendErr: spendErr, pays: pays, advs: advs, reqs: reqs, bal: balances_(e),
+    k: { present: days.filter(d => d.in).length, late: days.filter(d => d.late).length, absent: days.filter(d => d.absent).length, leave: days.filter(d => d.leave).length, hours: sum(days, d => d.hours), ot: sum(days, d => d.ot),
+      otPend: sum(days.filter(d => d.otState === 'pending'), d => d.otRaw), bonus: sum(days, d => d.bonus + d.grant), ded: sum(days, d => d.deduction + (d.lateDed || 0)), paid: sum(pays, p => p.amount), spend: sum(spend, s => s.amount), spendN: spend.length } };
+}
+function adjDel(pin, id) {
+  const a = admin_(pin, true);
+  return lock_(() => { const r = rows_('Adjustments').find(x => x.ID === id); if (!r) throw new Error('مش موجود'); sh_('Adjustments').deleteRow(r._row); return { ok: true, by: a.Name }; });
+}
+
