@@ -11,6 +11,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@500;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap">
 <style>
+.tg-bar{position:relative;height:10px;background:var(--bg);border-radius:999px;margin:6px 0 2px}.tg-bar i{display:block;height:100%;border-radius:999px;background:var(--accent)}.tg-bar i.ok{background:var(--in)}.tg-bar span{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg);opacity:.5}
 :root{--bg:#F3F4F7;--surface:#fff;--fg:#151A23;--muted:#5E6675;--line:#DDE1E8;--accent:#9A7330;--in:#1E7A4F;--out:#37475E;--warn:#B4541A;
 --display:"Readex Pro","IBM Plex Sans Arabic",Tahoma,sans-serif;--body:"IBM Plex Sans Arabic",Tahoma,"Segoe UI",sans-serif}
 @media (prefers-color-scheme:dark){:root{--bg:#0F1218;--surface:#181D26;--fg:#E9ECF1;--muted:#99A1AF;--line:#2A313D;--accent:#C9A15A;--in:#2F9E69;--out:#5A6F8F;--warn:#E08A50;color-scheme:dark}}
@@ -167,7 +168,7 @@ li:last-child{border-bottom:0}
       <div class="msg" id="cjMsg"></div>
       <div class="card" id="cjNow"></div>
       <div class="card" id="cjTrip" hidden></div>
-      <div class="card" id="cjEst" hidden><h2>بنود المقايسة اللي العميل وافق عليها</h2><ul id="cjItems"></ul></div>
+      <div class="card" id="cjEst" hidden><h2>✅ بنود المقايسة المعتمدة</h2><div class="muted" style="margin:-4px 0 6px">دوس «💸 سجّل» — البند والسعر بيتكتبوا لوحدهم، عدّل المبلغ للي دفعته فعلاً</div><ul id="cjItems"></ul></div>
     </div>
     <div id="cChk" hidden style="display:flex;flex-direction:column;gap:12px">
       <div class="top"><h1 id="ckTitle"></h1><button class="link cBack">رجوع</button></div>
@@ -175,7 +176,7 @@ li:last-child{border-bottom:0}
       <div class="card" id="ckTop"></div>
       <div class="card" id="ckItemsCard"><div id="ckItems"></div></div>
       <div class="card"><label for="ckFind" id="ckFindLbl" style="margin-top:0">ملاحظات</label><textarea id="ckFind"></textarea>
-        <label for="ckPhotos">📷 صور (لو حابب) — صوّر أو اختار من الصور</label><input id="ckPhotos" type="file" accept="image/*" multiple><div class="muted" id="ckPhN"></div></div>
+        <label for="ckPhotos" id="ckPhLbl">📷 صور (لو حابب) — صوّر أو اختار من الصور</label><input id="ckPhotos" type="file" accept="image/*" multiple><div class="muted" id="ckPhN"></div></div>
       <button class="btn" id="ckSave">حفظ</button>
       <div class="msg" id="ckMsg"></div>
     </div>
@@ -218,6 +219,7 @@ li:last-child{border-bottom:0}
       <p class="muted" id="rule" style="margin:10px 0 0"></p>
     </div>
 
+    <div class="card" id="gCard" hidden></div>
     <div class="card" id="mCard" hidden>
       <h2>الشهر ده</h2>
       <div class="stats">
@@ -318,11 +320,25 @@ tick(); setInterval(tick, 15000);
 
 function hm(h){ const m = Math.round(h*60); return Math.floor(m/60)+':'+String(m%60).padStart(2,'0'); }
 
+// 🎯 the month's target on the home card: where the company is, the pace we need, and what I moved this month
+async function tgtCard(me){ const C = $('gCard'); let G; try { G = await ops('targetGet', ''); } catch(e){ return; } if (!G.set) { C.hidden = true; return; }
+  C.textContent = ''; C.hidden = false; const h = document.createElement('h2'); h.textContent = '🎯 تارجت الشهر'; h.style.margin = '0 0 4px'; C.append(h);
+  const sub = document.createElement('div'); sub.className = 'muted'; sub.textContent = 'فاضل ' + G.days.left + ' يوم شغل من ' + G.days.total; C.append(sub);
+  [['rev', '💰 الفلوس'], ['cars', '🚗 العربيات']].forEach(x => { const r = G.rows.find(y => y.key === x[0]); if (!r || r.pct === null) return;
+    const w = document.createElement('div'); w.style.marginTop = '10px'; const t = document.createElement('div'); t.style.cssText = 'display:flex;justify-content:space-between;font-weight:600';
+    const a = document.createElement('span'); a.textContent = x[1] + (r.actual !== null && !r.money ? ' — ' + r.actual + ' من ' + r.target : ''); const b = document.createElement('span'); b.textContent = r.pct + '%'; b.style.color = r.pct >= r.pacePct ? 'var(--in)' : 'var(--warn)'; t.append(a, b);
+    const bar = document.createElement('div'); bar.className = 'tg-bar'; const f = document.createElement('i'); f.style.width = Math.min(100, r.pct) + '%'; if (r.pct >= r.pacePct) f.className = 'ok'; const mk = document.createElement('span'); mk.style.insetInlineStart = Math.min(100, r.pacePct) + '%'; bar.append(f, mk);
+    const n = document.createElement('div'); n.className = 'muted'; n.textContent = r.pct >= 100 ? '🏆 وصلنا!' : (r.pct >= r.pacePct ? '✅ قدام المعدل' : '⚠️ ورا المعدل — المفروض نكون ' + r.pacePct + '%') + (r.forecastPct && r.pct < 100 ? ' · بالمعدل ده هنقفل على ' + r.forecastPct + '%' : '');
+    w.append(t, bar, n); C.append(w); });
+  if (G.prize) { const p = document.createElement('div'); p.style.cssText = 'margin-top:10px;font-weight:600;color:var(--accent)'; p.textContent = '🎁 لو وصلنا: ' + G.prize; C.append(p); }
+  const nk = v => String(v || '').toLowerCase().replace(/ou/g, 'o').replace(/[^a-z\u0621-\u064a]/g, ''), mine = (G.team || []).find(x => nk(x.name) === nk(me)), rank = (G.team || []).indexOf(mine);
+  if (mine) { const m = document.createElement('div'); m.className = 'muted'; m.style.marginTop = '8px'; m.textContent = '👤 إنت الشهر ده: ' + mine.cars + ' عربية' + (rank === 0 ? ' 🥇' : rank === 1 ? ' 🥈' : rank === 2 ? ' 🥉' : '') + ' · ' + [mine.rec ? mine.rec + ' استلام' : '', mine.quotes ? mine.quotes + ' مقايسة' : '', mine.del ? mine.del + ' تسليم' : '', mine.exps ? mine.exps + ' مصروف' : ''].filter(Boolean).join(' · '); C.append(m); }
+}
 async function load(){
   try {
     const s = await call('empState', PIN);
     show('main');
-    $('who').textContent = s.name; cProbe(); pushNag();
+    $('who').textContent = s.name; cProbe(); pushNag(); tgtCard(s.name);
     const b = $('act'); b.className = 'act ' + s.next; b.textContent = s.next === 'in' ? 'Check-in' : 'Check-out'; b.disabled = false;
     $('sIn').textContent = t12(s.today.firstIn) || '—';
     $('sOut').textContent = t12(s.today.lastOut) || '—';
@@ -551,7 +567,7 @@ $('xAddLine').onclick = () => { const n = $('xMore').children.length + 2, r = do
 function money0(n){ return Number(n || 0).toLocaleString('en-US', {maximumFractionDigits: 0}); }
 function xEstRender(j){ const L = $('xEstL'); L.textContent = ''; const items = j.items || [];
   items.forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.className = 'cpill'; b.dataset.id = x.id; b.style.cssText = 'cursor:pointer;padding:5px 12px;font-size:13px';
-    b.textContent = (x.done ? '✓ ' : '') + x.item + (x.qty > 1 ? ' × ' + x.qty : '') + (x.done ? ' — اتصرف ' + money0(x.done) : '');
+    b.textContent = (x.done ? '✓ ' : '') + x.item + (x.qty > 1 ? ' × ' + x.qty : '') + (x.done ? ' — اتصرف ' + money0(x.done) : x.cost ? ' — ' + money0(x.cost) : '');
     if (x.done) b.style.opacity = '.6';
     b.onclick = () => xEstPick(x); L.append(b); });
   const B = $('xBud'); B.textContent = ''; B.style.color = '';
@@ -559,8 +575,8 @@ function xEstRender(j){ const L = $('xEstL'); L.textContent = ''; const items = 
     if (rem < 0) B.style.color = '#C0392B'; else if (rem < j.budget.cap * 0.2) B.style.color = 'var(--warn)'; }
   xEstMark(); }
 function xEstPick(x){ let row = null;
-  if (!$('xItem').value.trim() && !$('xCost').value.trim()) { $('xItem').value = x.item; $('xItem').dataset.estId = x.id; $('xQty').value = x.qty || 1; $('xCat').value = x.cat || 'Parts'; $('xCost').focus(); }
-  else { $('xAddLine').click(); row = $('xMore').lastElementChild; row.dataset.estId = x.id; row.querySelector('.li').value = x.item; row.querySelector('.lq').value = x.qty || 1; row.querySelector('.lt').value = x.cat || 'Parts'; row.querySelector('.lc').focus(); }
+  if (!$('xItem').value.trim() && !$('xCost').value.trim()) { $('xItem').value = x.item; $('xItem').dataset.estId = x.id; $('xQty').value = x.qty || 1; $('xCat').value = x.cat || 'Parts'; if (x.cost && !x.done) $('xCost').value = x.cost; $('xCost').focus(); $('xCost').select(); }
+  else { $('xAddLine').click(); row = $('xMore').lastElementChild; row.dataset.estId = x.id; row.querySelector('.li').value = x.item; row.querySelector('.lq').value = x.qty || 1; row.querySelector('.lt').value = x.cat || 'Parts'; if (x.cost && !x.done) row.querySelector('.lc').value = x.cost; row.querySelector('.lc').focus(); }
   xTot(); xEstMark(); }
 function xEstMark(){ const used = new Set([$('xItem').dataset.estId].concat([...document.querySelectorAll('#xMore .xl')].map(r => r.dataset.estId)).filter(Boolean));
   document.querySelectorAll('#xEstL button').forEach(b => { b.style.background = used.has(b.dataset.id) ? 'var(--accent)' : ''; b.style.color = used.has(b.dataset.id) ? '#fff' : ''; b.disabled = used.has(b.dataset.id); }); }
@@ -682,10 +698,10 @@ const INSP = [['المحرك',['صوت المحرك','تسريب زيت','سير
   ['الكهرباء',['البطارية','الإضاءة الأمامية والخلفية','لمبات التابلوه','الشاشة والأزرار']],['التكييف',['التبريد','فلتر التكييف']],['الفتيس',['نقل السرعات','تسريب الفتيس']],
   ['البودي والزجاج',['الزجاج والمرايات','المساحات','الأبواب والكوالين']],['التجربة',['Road test','OBD scan']]];
 const CFORMS = {
-  Reception:{title:'استلام العربية', km:true, fuel:true, complaint:true, levels:L2, groups:[['وقت الاستلام',['خدوش أو خبطات موجودة','لمبات التابلوه','الاستبن والعدة','حاجات شخصية في العربية']]], find:'ملاحظات الاستلام', ok:'اتحفظ الاستلام'},
+  Reception:{title:'استلام العربية', km:true, fuel:true, complaint:true, photos:4, levels:L2, groups:[['بره العربية',['خدوش أو خبطات (صوّرها)','الزجاج والمرايات','الجنوط والكاوتش']],['جوه العربية',['لمبات التابلوه وهي دايرة','التكييف','الاستبن والعدة','حاجات شخصية في العربية','الرخصة / الأوراق','عدد المفاتيح']]], find:'ملاحظات الاستلام', ok:'اتحفظ الاستلام'},
   Inspection:{title:'فحص العربية', levels:L3, groups:INSP, find:'ملاحظات الفحص (كل حاجة لاحظتها)', ok:'اتحفظ الفحص', need:'fix'},
   QC:{title:'فحص بعد الإصلاح', levels:L2, groups:null, find:'ملاحظات', ok:'اتحفظ الفحص بعد الإصلاح'},
-  Delivery:{title:'تسليم العربية', km:true, receivedBy:true, levels:L2, groups:[['وقت التسليم',['العربية نضيفة','الحاجات الشخصية رجعت']]], find:'ملاحظات التسليم', ok:'اتسجل التسليم'}};
+  Delivery:{title:'تسليم العربية', km:true, receivedBy:true, levels:L2, groups:[['وقت التسليم',['العربية نضيفة جوه وبره','مفيش لمبات في التابلوه','الحاجات الشخصية والأوراق رجعت','القطع القديمة اترجعت أو اتعرضت على العميل','الشغل اللي اتعمل اتشرح للعميل']]], find:'ملاحظات التسليم', ok:'اتسجل التسليم'}};
 function el(t, txt, cls){ const e = document.createElement(t); if (txt !== undefined && txt !== null) e.textContent = txt; if (cls) e.className = cls; return e; }
 function cbtn(txt, cls, fn){ const b = el('button', txt, 'btn ' + (cls || '')); b.type = 'button'; b.onclick = fn; return b; }
 function csay(id, t, bad){ $(id).textContent = t || ''; $(id).className = 'msg' + (bad ? ' err' : t ? ' ok' : ''); }
@@ -701,7 +717,13 @@ async function cLoad(){ bgPull(); cView('cList'); if (!CJOBS.length) csay('cMsg'
   try { const r = await ops('staffHome'); CJOBS = r.jobs; CPHASE = r.phase || 1; csay('cMsg', ''); cRender(); return r; } catch(e){ csay('cMsg', clean(e.message), true); } }
 $('cReload').onclick = () => cLoad();
 function cNext(j){
-  if (j.asana) return ['المرحلة بتمشي من Asana (' + (CSL[j.status] || j.status) + ')'];
+  if (j.asana) { const k = j.checks || {};
+    if (!k.Reception) return ['📥 استلام العربية (صور + عداد + شكوى العميل)', () => cCheck(j, 'Reception')];
+    if (j.pend && !j.draft) return ['⏳ المقايسة عند إسماعيل — أول ما يعتمدها البنود هتظهرلك في «+ مصروف»'];
+    if (!j.items.length && !j.draft && !k.Delivery) return ['📝 اكتب المقايسة', () => cEstOpen(j)];
+    if (j.draft) return ['📝 كمّل المقايسة (' + j.draft + ') وابعتها', () => cEstOpen(j)];
+    if (!k.Delivery) return ['🏁 تسليم العربية للعميل', () => cCheck(j, 'Delivery')];
+    return ['✓ اتسلمت — ' + k.Delivery]; }
   if (j.status === 'Request') return ['استلام العربية', () => cCheck(j, 'Reception')];
   if (j.status === 'Received') return j.type === 'Quick' ? ['مستني الفاتورة من المكتب'] : ['فحص العربية', () => cCheck(j, 'Inspection')];
   if (j.status === 'Inspected') return [j.draft ? 'كمّل المقايسة (' + j.draft + ')' : 'اكتب المقايسة', () => cEstOpen(j)];
@@ -785,7 +807,12 @@ function cOpen(no){ const j = CJOBS.find(x => x.jobNo === no); if (!j) { CCUR = 
   const N = $('cjNow'); N.textContent = ''; const n = cNext(j);
   if (n[1]) N.append(cbtn(n[0], '', n[1])); else N.append(el('div', n[0], 'muted'));
   const a = el('div', null, 'acts'); a.append(cbtn('+ مصروف', 'ghost', async () => { TAB = 'exp'; $('tAtt').className = ''; $('tCar').className = ''; $('tExp').className = 'on'; show('main'); await xLoad(); const x = XJOBS.find(y => y.jobNo === j.jobNo) || j; xOpen(x); }));
-  if (j.asana) a.append(cbtn(j.draft ? '📝 كمّل المقايسة (' + j.draft + ')' : '📝 مقايسة', 'ghost', () => cEstOpen(j)));
+  if (j.asana) { a.append(cbtn(j.draft ? '📝 كمّل المقايسة (' + j.draft + ')' : j.items.length ? '+ مقايسة إضافية' : '📝 مقايسة', 'ghost', () => cEstOpen(j)));
+    const k = j.checks || {}, ck = el('div', null, 'acts'); ck.style.gridTemplateColumns = '1fr 1fr';
+    [['Reception', '📥 استلام'], ['Inspection', '🔍 فحص'], ['QC', '✅ مراجعة بعد الإصلاح'], ['Delivery', '🏁 تسليم']].forEach(x => {
+      const b = cbtn((k[x[0]] ? '✓ ' : '') + x[1], k[x[0]] ? 'ghost' : 'ghost', () => k[x[0]] && x[0] !== 'QC' ? csay('cjMsg', x[1] + ' اتعمل: ' + k[x[0]]) : cCheck(j, x[0]));
+      if (k[x[0]]) b.style.opacity = '.65'; ck.append(b); });
+    N.append(ck); }
   else if (j.status === 'Working' || j.status === 'ClientApproved') a.append(cbtn('+ مقايسة إضافية', 'ghost', () => cEstOpen(j))); else a.style.gridTemplateColumns = '1fr';
   N.append(a); const mn = cMoney(j); if (mn) N.append(mn);
   if (j.canBudget) { const w = el('div'); w.style.cssText = 'margin-top:10px;display:grid;gap:6px';
@@ -814,7 +841,9 @@ function cOpen(no){ const j = CJOBS.find(x => x.jobNo === no); if (!j) { CCUR = 
     w.append(sv, mr); N.append(w); }
   cTrip(j);
   const I = $('cjItems'); I.textContent = ''; $('cjEst').hidden = !j.items.length;
-  j.items.forEach(x => { const li = el('li'); li.append(el('span', x.item), el('span', x.qty > 1 ? '× ' + x.qty : '', 'muted')); I.append(li); });
+  j.items.forEach(x => { const li = el('li'), a2 = el('span'); a2.append(el('b', x.item + (x.qty > 1 ? ' × ' + x.qty : '')), el('div', x.done ? '✓ اتصرف ' + money(x.done) + (x.cost ? ' من ' + money(x.cost) : '') : 'المقايسة: ' + money(x.cost) + (x.wait ? ' · مستني رد العميل' : ''), 'muted'));
+    li.append(a2); if (!x.done) li.append(cbtn('💸 سجّل', 'ghost', async () => { TAB = 'exp'; $('tAtt').className = ''; $('tCar').className = ''; $('tExp').className = 'on'; show('main'); await xLoad(); const jj = XJOBS.find(y => y.jobNo === j.jobNo) || j; xOpen(jj); const it = (jj.items || []).find(y => y.id === x.id); if (it) xEstPick(it); }));
+    I.append(li); });
   cView('cJob'); }
 async function cRefresh(no, msg){ await cLoad(); cOpen(no); if (msg && CCUR) csay('cjMsg', msg); else if (msg) csay('cMsg', msg); }
 $('cJobBack').onclick = () => { CCUR = null; cLoad(); };
@@ -866,14 +895,15 @@ function cCheck(j, key){ CCUR = j; CFKEY = key; CFORM = CFORMS[key]; CPH = []; $
     g[1].forEach(name => { const d = el('div', null, 'chk'); d.dataset.name = (CFORM.groups ? '' : g[0] === 'الشغل اللي اتعمل' ? '' : 'مراجعة: ') + name; d.dataset.s = '';
       const note = el('input'); note.hidden = true; note.setAttribute('aria-label', 'ملاحظة ' + name);
       d.append(el('b', name), cSeg(d, note, CFORM.levels, CFORM.need), note); box.append(d); }); });
-  $('ckFindLbl').textContent = CFORM.find; $('ckFind').value = ''; csay('ckMsg', ''); cView('cChk'); }
-$('ckPhotos').onchange = function(){ CPH = []; const fs = [...(this.files || [])].slice(0, 8); $('ckPhN').textContent = fs.length ? 'بيجهّز ' + fs.length + ' صورة…' : '';
+  $('ckFindLbl').textContent = CFORM.find; $('ckFind').value = ''; csay('ckMsg', ''); $('ckPhLbl').textContent = CFORM.photos ? '📷 صور إجباري: ' + CFORM.photos + ' على الأقل — قدام، ورا، الجنبين، والعداد' : '📷 صور (لو حابب) — صوّر أو اختار من الصور'; cView('cChk'); }
+$('ckPhotos').onchange = function(){ CPH = []; const fs = [...(this.files || [])].slice(0, 10); $('ckPhN').textContent = fs.length ? 'بيجهّز ' + fs.length + ' صورة…' : '';
   let n = 0; fs.forEach(f => shrink(f, d => { CPH.push(d); n++; if (n === fs.length) $('ckPhN').textContent = '✓ ' + fs.length + ' صورة جاهزة'; })); };
 $('ckSave').onclick = async function(){
   const items = {}; let missing = 0, noNote = 0;
   $('ckItems').querySelectorAll('.chk').forEach(d => { if (!d.dataset.s) { missing++; return; } const n = d.querySelector('input').value.trim();
     if (CFORM.need && d.dataset.s === CFORM.need && !n) noNote++; items[d.dataset.name] = {s: d.dataset.s, n}; });
   if (CFORM.km && !$('ckKm').value) return csay('ckMsg', 'اكتب الكيلومترات', true);
+  if (CFORM.photos && CPH.length < CFORM.photos) return csay('ckMsg', 'صوّر العربية: ' + CFORM.photos + ' صور على الأقل (اتصور ' + CPH.length + ')', true);
   if (CFORM.receivedBy && !$('ckRecBy').value.trim()) return csay('ckMsg', 'اكتب العربية اتسلمت لمين', true);
   if (missing) return csay('ckMsg', 'فاضل ' + missing + ' بند من غير اختيار', true);
   if (noNote) return csay('ckMsg', 'اكتب إيه اللي محتاج يتصلح في ' + noNote + ' بند', true);
