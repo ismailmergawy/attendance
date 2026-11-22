@@ -1,0 +1,164 @@
+/* 👤 employee profile */
+var PRO = { id: null, view: 'week', ref: null, open: null, R: null, kpi: null };
+(function(){ var s = document.createElement('style'); s.textContent = [
+ '#pro{position:fixed;inset:0;z-index:60;background:var(--bg);overflow:auto;padding:18px max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left))}',
+ '#pro .in{max-width:1050px;margin:0 auto;display:flex;flex-direction:column;gap:12px}',
+ '.pnm{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:start;border-bottom:1px dashed var(--accent)}.pnm:hover{color:var(--accent)}',
+ '.prow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.prow.sb{justify-content:space-between}',
+ '.pk{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:8px}.pk .kpi{padding:9px 12px}.pk .kpi b{font-size:20px}.pk .kpi small{display:block;font-size:11px;color:var(--muted)}',
+ '.pcal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.pcal .h{font-size:12px;color:var(--muted);text-align:center}',
+ '.pc{border:1px solid var(--line);border-radius:10px;min-height:60px;padding:5px 7px;display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:var(--surface);cursor:pointer;font:inherit;color:var(--fg);text-align:start;position:relative}',
+ '.pc.e{border:0;background:none;cursor:default}.pc.sel{outline:2px solid var(--accent)}.pc small{font-size:11px;line-height:1.3}.pc i{position:absolute;top:4px;left:6px;font-style:normal;font-size:10px;color:var(--accent)}',
+ '.pc.st-ok,.pc.st-bad,.pc.st-info{border-color:transparent}',
+ '.pd{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}.pd.op{border-color:var(--accent)}',
+ '.pdh{width:100%;background:none;border:0;font:inherit;color:var(--fg);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;cursor:pointer;text-align:start}',
+ '.pdb{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;padding:0 14px 14px}',
+ '.pb{background:var(--bg);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}.pb h3{margin:0;font-size:14px;font-family:var(--display)}',
+ '.pr{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;border-top:1px solid var(--line);padding-top:5px}',
+ '.pf{display:flex;gap:6px;flex-wrap:wrap}.pf input{flex:1 1 90px;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--surface);color:var(--fg)}',
+ '.pk .kpi.ck{cursor:pointer;font:inherit;color:inherit;text-align:start}.pk .kpi.ck:hover{border-color:var(--accent)}.pk .kpi.on{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}',
+ '.pdr{background:var(--surface);border:1px solid var(--accent);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}.pdr h3{margin:0 0 4px;font-size:15px;font-family:var(--display)}',
+ '.pdr .pr button.dt{background:none;border:0;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-decoration:underline;white-space:nowrap}',
+ '.pm{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}',
+ '.pm h3{margin:0 0 4px;font-size:14px;font-family:var(--display)}.pm .pr.ck{cursor:pointer}.pm .pr.ck:hover span:first-child{color:var(--accent)}.pm .pr.tot{font-weight:700;border-top:2px solid var(--fg)}',
+ '.psm{font-size:12px;padding:4px 10px}.pgood{color:var(--ok)}.pbad{color:var(--bad)}',
+ '#pro details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}#pro summary{cursor:pointer;font-weight:600}',
+ '@media(max-width:600px){.pk{grid-template-columns:repeat(3,minmax(0,1fr))}.pk .kpi b{font-size:16px}.pc{min-height:44px;padding:4px}.pc small{display:none}}'
+].join('\n'); document.head.append(s); })();
+var PDOW = { Saturday: 'السبت', Sunday: 'الحد', Monday: 'الاتنين', Tuesday: 'التلات', Wednesday: 'الأربع', Thursday: 'الخميس', Friday: 'الجمعة' };
+var PADJ = { Bonus: '🎁 Bonus', Deduction: '➖ خصم', Grace: '🕊 سماح تأخير', PaidPermission: '🟢 إذن مدفوع', OTApprove: '⏱ Overtime اتوافق', OTReject: '✗ Overtime اترفض', Grant: '🎁 منحة' };
+function proName(id, name, cls){ var td = el('td', undefined, cls); var b = el('button', name, 'pnm'); b.type = 'button'; b.title = 'افتح ملفه'; b.onclick = function(ev){ ev.stopPropagation(); openPro(id); }; td.append(b); return td; }
+function pYmd(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function pRange(){ var r = PRO.ref ? new Date(PRO.ref + 'T12:00:00') : new Date(), a, b;
+  if (PRO.view === 'day') { a = b = r; }
+  else if (PRO.view === 'week') { a = new Date(r); a.setDate(r.getDate() - ((r.getDay() + 1) % 7)); b = new Date(a); b.setDate(a.getDate() + 6); }
+  else { a = new Date(r.getFullYear(), r.getMonth(), 1, 12); b = new Date(r.getFullYear(), r.getMonth() + 1, 0, 12); }
+  return [pYmd(a), pYmd(b)]; }
+function openPro(id){ PRO.id = id; PRO.view = 'week'; PRO.ref = null; PRO.open = null; var P = $('pro');
+  if (!P) { P = el('div'); P.id = 'pro'; document.body.append(P); document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && $('pro') && !$('pro').hidden) closePro(); }); }
+  P.hidden = false; document.body.style.overflow = 'hidden'; loadPro(); }
+function closePro(){ $('pro').hidden = true; document.body.style.overflow = ''; }
+async function loadPro(){ var P = $('pro'), r = pRange(); if (!PRO.R) { P.textContent = ''; P.append(el('div', 'بيحمّل…', 'muted')); }
+  try { PRO.R = await call('empPro', PIN, PRO.id, r[0], r[1]); drawPro(); } catch (e) { P.textContent = ''; var w = el('div', undefined, 'in'); w.append(el('div', clean(e.message), 'msg err')); var c = el('button', 'رجوع', 'ghost'); c.onclick = closePro; w.append(c); P.append(w); } }
+function pLive(){ return PRO.R.days.filter(function(d){ return !d.future; }); }
+function pSum(L, f){ return Math.round(L.reduce(function(t, x){ return t + Number(f(x) || 0); }, 0) * 100) / 100; }
+function pAdjs(types){ var o = []; PRO.R.days.forEach(function(d){ d.adj.forEach(function(a){ if (types.indexOf(a.type) >= 0) o.push(Object.assign({ date: d.date, weekday: d.weekday }, a)); }); }); return o; }
+function pKpis(){ var R = PRO.R, D = pLive(), k = el('div', undefined, 'pk'), bon = pAdjs(['Bonus', 'Grant']), ded = pAdjs(['Deduction']);
+  [['present', 'حضر', D.filter(function(d){ return d.in; }).length, 'يوم'], ['late', 'اتأخر', D.filter(function(d){ return d.late; }).length, 'مرة', 'warn'], ['absent', 'غاب', D.filter(function(d){ return d.absent; }).length, 'يوم', 'warn'],
+   ['leave', 'أجازات وأذونات', D.filter(function(d){ return d.leave || d.status === 'Paid Permission'; }).length, 'يوم'], ['hours', 'ساعات الشغل', hm(pSum(D, function(d){ return d.hours; })), ''],
+   ['ot', 'Overtime', hm(pSum(D, function(d){ return d.otNet; })), (function(){ var p = pSum(D.filter(function(d){ return d.otState === 'pending'; }), function(d){ return d.otRaw; }); return p ? '⏳ مستني ' + hm(p) : 'اتوافق عليه'; })()],
+   ['bonus', 'Bonus', money(pSum(bon, function(a){ return a.amount; })), bon.length + ' مرة'], ['ded', 'خصومات', money(pSum(ded, function(a){ return a.amount; }) + pSum(D, function(d){ return d.autoLate ? d.m.late : 0; })), ded.length + ' مرة', 'warn'],
+   ['paid', 'اتقبض', money(pSum(R.pays, function(p){ return p.amount; })), R.pays.length + ' دفعة'], ['spend', 'صرف على الشغل', money(pSum(R.days, function(d){ return pSum(d.spend, function(x){ return x.amount; }); })), pSum(R.days, function(d){ return d.spend.length; }) + ' بند']]
+  .forEach(function(x){ var d = el('button', undefined, 'kpi ck ' + (PRO.kpi === x[0] ? 'on ' : '') + (x[4] && x[2] && x[2] !== '0' ? x[4] : '')); d.type = 'button'; d.append(el('span', x[1] + ' ▾'), el('b', String(x[2]))); if (x[3]) d.append(el('small', x[3]));
+    d.onclick = function(){ PRO.kpi = PRO.kpi === x[0] ? null : x[0]; drawPro(); var z = $('pdrill'); if (z) z.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }; k.append(d); });
+  [['Annual باقي', R.bal.annualLeft, 'من ' + R.bal.annualTotal], ['Casual باقي', R.bal.casualLeft, 'من ' + R.bal.casualTotal]].forEach(function(x){ var d = el('div', undefined, 'kpi'); d.append(el('span', x[0]), el('b', String(x[1])), el('small', x[2])); k.append(d); });
+  return k; }
+function pGo(date){ PRO.open = date; if (PRO.view === 'day') { PRO.ref = date; loadPro(); return; } var inR = PRO.R.days.some(function(d){ return d.date === date; }); if (!inR) { PRO.view = 'day'; PRO.ref = date; loadPro(); return; } drawPro(); setTimeout(function(){ var x = $('pday'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50); }
+function pDrill(){ var R = PRO.R, K = PRO.kpi, box = el('div'); if (!K) return box; box = el('div', undefined, 'pdr'); box.id = 'pdrill'; var D = pLive(), rows = [], title = '', total = '';
+  var row = function(date, txt, val, cls){ var r = el('div', undefined, 'pr'), l = el('span'); if (date) { var b = el('button', (PDOW[(R.days.find(function(d){ return d.date === date; }) || {}).weekday] || '') + ' ' + date.slice(5), 'dt'); b.onclick = function(){ pGo(date); }; l.append(b, document.createTextNode('  ')); } l.append(document.createTextNode(txt)); r.append(l, el('b', val === undefined ? '' : String(val), cls)); rows.push(r); };
+  if (K === 'present' || K === 'hours') { title = '✅ أيام الحضور'; D.filter(function(d){ return d.in; }).forEach(function(d){ row(d.date, '⬇ ' + t12(d.in) + (d.out ? '  ⬆ ' + t12(d.out) : d.live ? ' (لسه جوه)' : d.open ? ' (نسي Check-out)' : '') + (d.late ? ' · متأخر' : '') + (d.extraDay ? ' · يوم زيادة' : ''), hm(d.hours) + ' س'); }); total = hm(pSum(D, function(d){ return d.hours; })) + ' ساعة'; }
+  if (K === 'late') { title = '⏰ أيام التأخير (آخر معاد ' + t12(R.emp.start) + ')'; D.filter(function(d){ return d.late; }).forEach(function(d){ row(d.date, 'جه ' + t12(d.in) + (d.status === 'Late (Grace)' ? ' · عليه سماح' : d.m.late ? '' : ' · مش متخصم'), d.m.late ? '−' + money(d.m.late) : '—', 'pbad'); }); total = d0(pSum(D, function(d){ return d.m.late; })); }
+  if (K === 'absent') { title = '❌ أيام الغياب'; D.filter(function(d){ return d.absent; }).forEach(function(d){ row(d.date, 'غياب من غير إذن', '−' + money(d.m.absent), 'pbad'); }); total = d0(pSum(D, function(d){ return d.m.absent; })); }
+  if (K === 'leave') { title = '🌴 الأجازات والأذونات'; D.filter(function(d){ return d.leave || d.status === 'Paid Permission'; }).forEach(function(d){ row(d.date, stLabel(d.leave || d.status), ''); }); }
+  if (K === 'ot') { title = '⏱ Overtime يوم بيوم (ساعات اليوم ' + R.emp.hours + ')' + (R.emp.ot ? '' : ' — الموظف ده مالوش Overtime'); D.filter(function(d){ return d.otRaw > 0 || d.otNet > 0 || d.otDed; }).forEach(function(d){
+      row(d.date, 'اشتغل ' + hm(d.hours) + ' · زيادة ' + hm(d.otRaw) + ' · ' + (d.otState === 'pending' ? '⏳ مستني موافقة' : d.otState === 'rejected' ? '✗ اترفض' : '✓ اتحسب ' + hm(d.otNet)) + (d.otDed ? ' · اتخصم منه ' + hm(d.otDed) + ' (إذن انصراف)' : ''), d.m.ot ? money(d.m.ot) : '—', d.m.ot ? 'pgood' : ''); });
+    total = hm(pSum(D, function(d){ return d.otNet; })) + ' ساعة' + (R.emp.otRate ? ' = ' + money(pSum(D, function(d){ return d.m.ot; })) : ''); }
+  if (K === 'bonus') { title = '🎁 الـ Bonus والمنح'; pAdjs(['Bonus', 'Grant']).forEach(function(a){ row(a.date, (a.type === 'Grant' ? 'منحة' : 'Bonus') + (a.reason ? ' — ' + a.reason : '') + (a.by ? ' (' + a.by + ')' : ''), '+' + money(a.amount), 'pgood'); }); total = money(pSum(pAdjs(['Bonus', 'Grant']), function(a){ return a.amount; })); }
+  if (K === 'ded') { title = '➖ الخصومات'; D.filter(function(d){ return d.autoLate && d.m.late; }).forEach(function(d){ row(d.date, 'خصم تأخير أوتوماتيك — جه ' + t12(d.in), '−' + money(d.m.late), 'pbad'); });
+    pAdjs(['Deduction']).forEach(function(a){ row(a.date, (a.reason || 'خصم') + (a.by ? ' (' + a.by + ')' : ''), '−' + money(a.amount), 'pbad'); }); }
+  if (K === 'paid') { title = '💰 اللي اتقبض'; R.pays.forEach(function(p){ row('', p.at.slice(0, 10) + ' · ' + (p.kind === 'Weekly' ? 'قبض أسبوع ' + p.period : p.kind === 'Overtime' ? 'Overtime + Bonus شهر ' + p.period : p.kind + ' ' + p.period) + (p.by ? ' (' + p.by + ')' : '') + (p.details ? ' · ' + p.details : ''), money(p.amount)); }); total = money(pSum(R.pays, function(p){ return p.amount; })); }
+  if (K === 'spend') { title = '🧾 اللي صرفه على الشغل'; R.days.forEach(function(d){ d.spend.forEach(function(x){ row(d.date, x.item + (x.supplier ? ' — ' + x.supplier : '') + (x.car ? ' · ' + (x.jobNo ? x.jobNo + ' ' : '') + x.car : '') + (x.from ? ' · ' + x.from : ''), money(x.amount)); }); }); total = money(pSum(R.days, function(d){ return pSum(d.spend, function(x){ return x.amount; }); })); }
+  if (K === 'adv') { title = '💵 أقساط السلف اللي بتتخصم'; R.advW.forEach(function(a){ if (a.week <= R.today) row('', 'أسبوع ' + a.week, '−' + money(a.amount), 'pbad'); }); }
+  if (K === 'extra') { title = '➕ أيام اشتغلها في أجازته'; D.filter(function(d){ return d.extraDay; }).forEach(function(d){ row(d.date, 'جه ' + t12(d.in) + ' في يوم أجازته (× ' + R.set.extraX + ')', '+' + money(d.m.extra), 'pgood'); }); }
+  var hd = el('div', undefined, 'prow sb'); hd.append(el('h3', title)); var x = el('button', '✕', 'ghost psm'); x.onclick = function(){ PRO.kpi = null; drawPro(); }; hd.append(x); box.append(hd);
+  if (!rows.length) box.append(el('div', 'مفيش حاجة في الفترة دي', 'muted')); rows.forEach(function(r){ box.append(r); });
+  if (total && rows.length) { var t = el('div', undefined, 'pr'); t.style.fontWeight = '700'; t.append(el('span', 'الإجمالي'), el('b', total)); box.append(t); }
+  box.append(el('div', 'دوس على التاريخ يفتحلك اليوم ده بالتفصيل', 'muted'));
+  return box; }
+function d0(n){ return n ? '−' + money(n) : '0'; }
+function pMoney(){ var R = PRO.R, w = el('div'); if (R.emp.salary === '' || R.emp.daily === null) return w; var D = pLive(); if (!D.length) return w;
+  var adv = pSum(R.advW.filter(function(a){ return a.week <= R.today; }), function(a){ return a.amount; }), base = pSum(D, function(d){ return d.m.base; }), late = pSum(D, function(d){ return d.m.late; }), abs = pSum(D, function(d){ return d.m.absent; }),
+    ext = pSum(D, function(d){ return d.m.extra; }), ded = pSum(D, function(d){ return d.deduction; }), gr = pSum(D, function(d){ return d.grant; }), bon = pSum(D, function(d){ return d.bonus; }), ot = pSum(D, function(d){ return d.m.ot; }), otH = pSum(D, function(d){ return d.otNet; });
+  var wk = Math.round((base - late - abs - ded + ext + gr - adv) * 100) / 100, mo = Math.round((ot + bon) * 100) / 100, paid = pSum(R.pays, function(p){ return p.amount; }), tot = Math.round((wk + mo) * 100) / 100;
+  w = el('div', undefined, 'pm'); var c1 = el('div'), c2 = el('div'), c3 = el('div');
+  var line = function(box, txt, val, key, cls){ var r = el('div', undefined, 'pr' + (key ? ' ck' : '') + (cls === 'tot' ? ' tot' : '')); r.append(el('span', txt + (key ? ' ›' : '')), el('b', val, cls === 'tot' ? '' : cls)); if (key) r.onclick = function(){ PRO.kpi = key; drawPro(); var z = $('pdrill'); if (z) z.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }; box.append(r); };
+  var nD = D.length, futureN = R.days.length - nD;
+  c1.append(el('h3', '🗓 القبض ' + (R.emp.cycle === 'Monthly' ? 'الشهري' : 'الأسبوعي')));
+  line(c1, 'المرتب عن ' + nD + ' يوم' + (R.emp.cycle === 'Monthly' ? '' : ' (اليوم ' + money(R.emp.daily) + ' × ' + R.set.weekDays + '÷7)'), money(base));
+  if (late) line(c1, '− خصم تأخير (' + D.filter(function(d){ return d.m.late; }).length + ')', '−' + money(late), 'late', 'pbad');
+  if (abs) line(c1, '− خصم غياب (' + D.filter(function(d){ return d.absent; }).length + ')', '−' + money(abs), 'absent', 'pbad');
+  if (ded) line(c1, '− خصومات (' + pAdjs(['Deduction']).length + ')', '−' + money(ded), 'ded', 'pbad');
+  if (ext) line(c1, '+ أيام في الأجازة (' + D.filter(function(d){ return d.extraDay; }).length + ')', '+' + money(ext), 'extra', 'pgood');
+  if (gr) line(c1, '+ منح', '+' + money(gr), 'bonus', 'pgood');
+  if (adv) line(c1, '− أقساط سلف', '−' + money(adv), 'adv', 'pbad');
+  line(c1, '= صافي ' + (R.emp.cycle === 'Monthly' ? 'الشهري' : 'الأسبوعي'), money(wk), '', 'tot');
+  c2.append(el('h3', '📆 قبض أول الشهر'));
+  line(c2, 'Overtime ' + hm(otH) + ' ساعة' + (R.emp.otRate ? ' × ' + money(R.emp.otRate) : '') + (R.emp.ot ? '' : ' (مالوش)'), money(ot), 'ot', 'pgood');
+  line(c2, '+ Bonus (' + pAdjs(['Bonus']).length + ')', money(bon), 'bonus', 'pgood');
+  line(c2, '= أول الشهر', money(mo), '', 'tot');
+  c3.append(el('h3', '⚖️ المستحق والمقبوض'));
+  line(c3, 'المستحق عن الفترة', money(tot)); line(c3, 'اتقبض فعلاً', money(paid), 'paid');
+  var diff = Math.round((tot - paid) * 100) / 100; line(c3, diff >= 0 ? 'لسه ليه' : 'اتقبض زيادة', money(Math.abs(diff)), '', 'tot');
+  c3.append(el('div', (futureN ? 'محسوب لحد النهارده بس (' + futureN + ' يوم لسه ماجوش). ' : '') + 'الحساب بنفس قواعد صفحة القبض. قبض أول الشهر (Overtime + Bonus) بيتصرف يوم 1 الشهر اللي بعده.', 'muted'));
+  w.append(c1, c2, c3); return w; }
+function pStatus(d){ if (d.future) return ['', 'st-mute']; if (d.open) return ['نسي Check-out', 'st-bad']; if (d.live) return ['شغال دلوقتي', 'st-ok']; return [stLabel(d.status), stClass(d.status)]; }
+function drawPro(){ var R = PRO.R, E = R.emp, K = R.k, P = $('pro'); P.textContent = ''; var W = el('div', undefined, 'in'); P.append(W);
+  var hd = el('div', undefined, 'prow sb'), t = el('div'); t.append(el('h1', E.name), el('div', [E.job, E.phone, E.dayOff ? 'أجازته ' + (PDOW[E.dayOff] || E.dayOff) : '', 'آخر معاد ' + t12(E.start) + (E.end ? ' · انصراف ' + t12(E.end) : '')].filter(Boolean).join(' · '), 'muted'));
+  var acts = el('div', undefined, 'prow'); if (R.canEdit) { var ed = el('button', '✏️ تعديل الملف', 'ghost'); ed.onclick = function(){ closePro(); var b = document.querySelector('#tabs button[data-t="emps"]'); if (b) b.click(); setTimeout(function(){ var s = $('eSel'); if (s) { s.value = E.id; s.dispatchEvent(new Event('change')); if (typeof renderEmp === 'function') renderEmp(); } }, 700); }; acts.append(ed); }
+  var cl = el('button', '✕ قفل', 'ghost'); cl.onclick = closePro; acts.append(cl); hd.append(t, acts); W.append(hd);
+  var sw = el('div', undefined, 'prow'); [['day', 'اليوم'], ['week', 'الأسبوع'], ['month', 'الشهر']].forEach(function(v){ var b = el('button', v[1], PRO.view === v[0] ? 'pri' : 'ghost'); b.onclick = function(){ PRO.view = v[0]; PRO.open = null; PRO.kpi = null; loadPro(); }; sw.append(b); });
+  var step = function(n){ var r = new Date((PRO.ref || pYmd(new Date())) + 'T12:00:00'); if (PRO.view === 'day') r.setDate(r.getDate() + n); else if (PRO.view === 'week') r.setDate(r.getDate() + 7 * n); else r.setMonth(r.getMonth() + n); PRO.ref = pYmd(r); PRO.open = null; loadPro(); };
+  var pv = el('button', '‹ اللي فات', 'ghost'); pv.onclick = function(){ step(-1); }; var nx = el('button', 'اللي بعده ›', 'ghost'); nx.onclick = function(){ step(1); };
+  sw.append(pv, el('b', R.from === R.to ? (PDOW[R.days[0].weekday] || '') + ' ' + R.from : R.from + ' ← ' + R.to), nx);
+  if (PRO.ref) { var td = el('button', 'النهارده', 'ghost'); td.onclick = function(){ PRO.ref = null; PRO.open = null; loadPro(); }; sw.append(td); }
+  W.append(sw);
+  W.append(pKpis(), pDrill(), pMoney());
+  if (PRO.view === 'month') { var cal = el('div', undefined, 'pcal'); ['السبت', 'الحد', 'الاتنين', 'التلات', 'الأربع', 'الخميس', 'الجمعة'].forEach(function(x){ cal.append(el('div', x, 'h')); });
+    var pad = (new Date(R.from + 'T12:00:00').getDay() + 1) % 7; for (var i = 0; i < pad; i++) cal.append(el('div', '', 'pc e'));
+    R.days.forEach(function(d){ var s = pStatus(d), c = el('button', undefined, 'pc ' + s[1] + (PRO.open === d.date ? ' sel' : '')); c.type = 'button';
+      c.append(el('b', String(+d.date.slice(8))), el('small', d.in ? t12(d.in) + (d.hours ? ' · ' + hm(d.hours) : '') : s[0]));
+      var m = (d.adj.length ? '●' : '') + (d.spend.length ? '◆' : '') + (d.otState === 'pending' ? '⏳' : ''); if (m) c.append(el('i', m));
+      c.onclick = function(){ PRO.open = PRO.open === d.date ? null : d.date; drawPro(); var x = $('pday'); if (x) x.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }; cal.append(c); });
+    W.append(cal, el('div', '● Bonus / خصم / سماح   ◆ مصاريف   ⏳ Overtime مستني موافقة', 'muted'));
+    var od = R.days.find(function(d){ return d.date === PRO.open; }); if (od) W.append(pDay(od, true)); }
+  else R.days.forEach(function(d){ W.append(pDay(d, PRO.view === 'day' || PRO.open === d.date)); });
+  if (R.spendErr) W.append(el('div', 'المصاريف من الـ Operations مش متاحة دلوقتي.', 'muted'));
+  if (R.advs.length) { var da = el('details'); da.append(el('summary', '💵 السلف (' + R.advs.length + ')')); R.advs.forEach(function(a){ var r = el('div', undefined, 'pr'); r.append(el('span', a.date + (a.inst && a.inst < a.amount ? ' · قسط ' + money(a.inst) + ' في الأسبوع' : '') + (a.reason ? ' · ' + a.reason : '')), el('b', money(a.amount))); da.append(r); }); W.append(da); }
+  if (R.reqs.length) { var dr = el('details'); dr.append(el('summary', '📝 الطلبات (' + R.reqs.length + ')')); R.reqs.forEach(function(q){ var r = el('div', undefined, 'pr'); r.append(el('span', (LBL[q.type] || q.type) + ' · ' + q.from + (q.to && q.to !== q.from ? ' ← ' + q.to : '') + (q.reason ? ' · ' + q.reason : '')), el('span', { Pending: '⏳ مستني', Approved: '✓ اتوافق', Rejected: '✗ اترفض' }[q.status] || q.status)); dr.append(r); }); W.append(dr); }
+  var df = el('details'); df.append(el('summary', '🗂 بياناته')); [['المرتب', E.salary === '' ? '—' : money(E.salary)], ['ساعات اليوم', E.hours], ['تاريخ التعيين', E.hire || '—'], ['ملاحظات', E.notes || '—']].forEach(function(x){ var r = el('div', undefined, 'pr'); r.append(el('span', x[0], 'muted'), el('span', String(x[1]))); df.append(r); }); W.append(df);
+}
+function pDay(d, open){ var R = PRO.R, s = pStatus(d), w = el('div', undefined, 'pd' + (open ? ' op' : '')); if (open) w.id = 'pday';
+  var h = el('button', undefined, 'pdh'); h.type = 'button'; var L = el('div', undefined, 'prow'); L.append(el('b', (PDOW[d.weekday] || d.weekday) + ' ' + d.date.slice(5))); if (s[0]) L.append(el('span', s[0], 'st ' + s[1]));
+  var Rr = el('div', undefined, 'prow muted'); if (d.in) Rr.append(el('span', '⬇ ' + t12(d.in) + (d.out ? '  ⬆ ' + t12(d.out) : ''))); if (d.hours) Rr.append(el('span', hm(d.hours) + ' ساعة'));
+  if (d.ot) Rr.append(el('span', 'Overtime +' + hm(d.ot), 'pgood')); else if (d.otState === 'pending') Rr.append(el('span', '⏳ +' + hm(d.otRaw), 'pbad'));
+  d.adj.forEach(function(a){ Rr.append(el('span', (PADJ[a.type] || a.type).split(' ')[0] + (a.amount ? ' ' + money(a.amount) : ''), a.type === 'Deduction' ? 'pbad' : '')); });
+  if (d.spend.length) Rr.append(el('span', '🧾 ' + money(d.spend.reduce(function(t, x){ return t + x.amount; }, 0))));
+  h.append(L, Rr); h.onclick = function(){ PRO.open = PRO.open === d.date ? null : d.date; if (PRO.view !== 'day') drawPro(); }; w.append(h);
+  if (!open) return w;
+  var b = el('div', undefined, 'pdb');
+  var pu = el('div', undefined, 'pb'); pu.append(el('h3', '⏱ البصمات'));
+  if (d.punches.length) d.punches.forEach(function(p){ var r = el('div', undefined, 'pr'); r.append(el('span', (p.type === 'in' ? '⬇ حضور ' : '⬆ انصراف ') + t12(p.time) + (p.manual ? ' (يدوي)' : ''))); if (p.map && p.map.indexOf('http') === 0) { var a = el('a', '📍 المكان'); a.href = p.map; r.append(a); } pu.append(r); });
+  else pu.append(el('div', d.leave ? stLabel(d.leave) : s[0] || 'مفيش بصمات', 'muted'));
+  if (d.hours) pu.append(el('div', 'اشتغل ' + hm(d.hours) + ' من ' + R.emp.hours + ' ساعة' + (d.otRaw ? ' — زيادة ' + hm(d.otRaw) : '') + (d.late ? ' — اتأخر عن ' + t12(R.emp.start) : ''), 'muted'));
+  b.append(pu);
+  var ad = el('div', undefined, 'pb'); ad.append(el('h3', '🎁 Bonus / خصم / سماح / Overtime'));
+  if (!d.adj.length) ad.append(el('div', 'مفيش', 'muted'));
+  d.adj.forEach(function(a){ var r = el('div', undefined, 'pr'); r.append(el('span', (PADJ[a.type] || a.type) + (a.amount ? ' — ' + (a.type === 'OTApprove' ? hm(a.amount) : money(a.amount)) : '') + (a.reason ? ' · ' + a.reason : '') + (a.by ? ' (' + a.by + ')' : '')));
+    if (R.canEdit) { var x = el('button', '🗑', 'ghost psm'); x.onclick = async function(){ if (!x.dataset.sure) { x.dataset.sure = 1; x.textContent = 'متأكد؟ دوس تاني'; return; } x.disabled = true; try { await call('adjDel', PIN, a.id); say('اتشال'); loadPro(); } catch (e) { say(clean(e.message), true); x.disabled = false; } }; r.append(x); }
+    ad.append(r); });
+  if (R.canEdit && !d.future) { var bar = el('div', undefined, 'prow'), box = el('div');
+    var form = function(type, label, needAmt, def){ box.textContent = ''; var f = el('div', undefined, 'pf'), am = el('input'); am.inputMode = 'decimal'; am.placeholder = type === 'OT' ? 'الساعات' : 'المبلغ'; if (def) am.value = def;
+      var rs = el('input'); rs.placeholder = 'السبب'; var sv = el('button', 'سجّل ' + label, 'pri psm');
+      sv.onclick = async function(){ sv.disabled = true; try { if (type === 'OT') await call('otDecide', PIN, R.emp.id, d.date, am.value, true); else await call('addAdjustment', PIN, { empId: R.emp.id, date: d.date, type: type, amount: am.value, reason: rs.value }); PRO.open = d.date; say('اتسجّل ✓'); loadPro(); } catch (e) { say(clean(e.message), true); sv.disabled = false; } };
+      if (needAmt) f.append(am); f.append(rs, sv); box.append(f); am.focus(); };
+    var mk = function(t, fn){ var x = el('button', t, 'ghost psm'); x.onclick = fn; bar.append(x); };
+    mk('+ Bonus', function(){ form('Bonus', 'Bonus', true); }); mk('+ خصم', function(){ form('Deduction', 'الخصم', true); });
+    if (d.late) mk('🕊 سماح التأخير', function(){ form('Grace', 'السماح', false); });
+    if (!d.in && !d.isOff) mk('🟢 إذن مدفوع', function(){ form('PaidPermission', 'الإذن', false); });
+    if (d.otState === 'pending' || d.otRaw > 0) mk('⏱ وافق على Overtime', function(){ form('OT', 'الموافقة', true, d.otRaw); });
+    ad.append(bar, box); }
+  b.append(ad);
+  if (d.spend.length) { var sp = el('div', undefined, 'pb'); sp.append(el('h3', '🧾 صرف (' + d.spend.length + ') — ' + money(d.spend.reduce(function(t, x){ return t + x.amount; }, 0))));
+    d.spend.forEach(function(x){ var r = el('div', undefined, 'pr'), tx = el('span', (x.at ? x.at + ' · ' : '') + x.item + (x.supplier ? ' — ' + x.supplier : '') + (x.from ? ' · ' + x.from : '')); if (x.car) tx.append(el('div', (x.jobNo ? x.jobNo + ' · ' : '') + x.car, 'muted')); r.append(tx, el('b', money(x.amount))); sp.append(r); }); b.append(sp); }
+  w.append(b); return w; }
+
