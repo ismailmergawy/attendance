@@ -1,6 +1,6 @@
 /* ---------- 👤 employee profile: a day, a week or a month of one employee — every day opens to its punches, Overtime, Bonus/خصم and what he spent (from Operations) ---------- */
 const OPS_SS_ = '1pfeTChCtIV1RZKyjJRbjkXUL3xonTaJ0fsV0wBRbyZ0';
-function proKey_(s) { return String(s || '').toLowerCase().replace(/[^a-z؀-ۿ]/g, ''); }
+function proKey_(s) { return String(s || '').toLowerCase().replace(/ou/g, 'o').replace(/[^a-z؀-ۿ]/g, ''); }
 function proOps_(name, from, to) {
   const O = SpreadsheetApp.openById(OPS_SS_), tab = n => { const s = O.getSheetByName(n); if (!s) return []; const v = s.getDataRange().getValues(), h = v.shift().map(x => String(x).trim());
     return v.map(r => { const o = {}; h.forEach((k, i) => o[k] = r[i] instanceof Date ? Utilities.formatDate(r[i], TZ, 'yyyy-MM-dd HH:mm') : r[i]); return o; }); };
@@ -25,10 +25,11 @@ function empPro(pin, empId, from, to) {
   const days = range_(from, to).map(d => { const x = day_(e, d, B), c = cell_(e, x, B, d); if (x.city) city = x.city; const r = rateFor(city);
     const P = (B.att[e.ID + '|' + d] || []).filter(q => q.Type === 'in' || q.Type === 'out').sort((p, q) => num_(p.Epoch) - num_(q.Epoch)).map(q => ({ type: q.Type, time: q.Time, map: String(q.Map || '').split(' | ')[0], manual: String(q.Map || '').indexOf('Manual') === 0 }));
     const A = (B.adj[e.ID + '|' + d] || []).filter(q => q.ID).map(q => ({ id: q.ID, type: q.Type, amount: num_(q.Amount), reason: q.Reason || '', by: q.By || '' }));
-    const m = { base: monthly ? num_(e.Salary) / dim(d) : r * (num_(S.WeekDays) || 7) / 7, late: (x.late ? num_(S.LateDeductionDays) * r : 0) + num_(x.lateManual), absent: x.absent ? num_(S.AbsenceDeductionDays) * r : 0,
+    const on = (!S.StartDate || d >= S.StartDate) && (!e.HireDate || d >= String(e.HireDate).slice(0, 10));
+    const m = { base: !on ? 0 : monthly ? num_(e.Salary) / dim(d) : r * (num_(S.WeekDays) || 7) / 7, late: (x.late ? num_(S.LateDeductionDays) * r : 0) + num_(x.lateManual), absent: x.absent ? num_(S.AbsenceDeductionDays) * r : 0,
       extra: x.extraDay ? num_(S.ExtraDayMultiplier) * r : 0, ot: otOk ? Math.max(0, x.overtime - num_(x.otDeducted)) * otRate : 0 };
     Object.keys(m).forEach(k => m[k] = r2_(m[k]));
-    return Object.assign(c, { bonus: r2_(x.bonus), grant: r2_(x.grant), deduction: r2_(x.deduction), absent: !!x.absent, autoLate: !!x.late, extraDay: !!x.extraDay, leave: x.leave || '', isOff: !!x.isOff, future: d > today_(), city: city,
+    return Object.assign(c, { started: on, bonus: r2_(x.bonus), grant: r2_(x.grant), deduction: r2_(x.deduction), absent: !!x.absent, autoLate: !!x.late, extraDay: !!x.extraDay, leave: x.leave || '', isOff: !!x.isOff, future: d > today_(), city: city,
       otNet: r2_(Math.max(0, x.overtime - num_(x.otDeducted))), otDed: r2_(num_(x.otDeducted)), m: m, punches: P, adj: A, spend: spend.filter(s => s.date === d) }); });
   const sum = (L, f) => r2_(L.reduce((t, x) => t + num_(f(x)), 0)), adv = rows_('Advances');
   const advW = range_(from, to).filter(d => weekday_(d) === 'Saturday').map(w => ({ week: w, amount: r2_(advanceDue_(adv, e.ID, w)) })).filter(x => x.amount);
