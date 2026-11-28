@@ -532,7 +532,7 @@ function xFillSup(){ const s = $('xSup'); s.textContent = '';
   XSUPS.forEach(x => { const o = document.createElement('option'); o.value = x.name; o.textContent = x.name + (x.type ? ' — ' + x.type : ''); s.append(o); });
   const on = document.createElement('option'); on.value = '__new'; on.textContent = '+ مورد جديد مش في القائمة'; s.append(on); $('xNew').hidden = true; }
 $('xSup').onchange = () => { $('xNew').hidden = $('xSup').value !== '__new'; };
-function xOpen(j){ XCUR = j; XPAY = ''; XREC = null;
+function xOpen(j){ XCUR = j; XPAY = ''; XREC = null; XFORCE = 0;
   $('xJob').textContent = j.jobNo + ' — ' + j.client; $('xCar').textContent = j.car + (j.plate ? ' · ' + j.plate : '');
   ['xItem','xCost','xNoRec','xNote','xNsName','xNsPhone'].forEach(i => $(i).value = ''); $('xQty').value = '1'; $('xCat').value = 'Parts';
   $('xPhoto').value = ''; $('xPrev').hidden = true; $('xMsg').textContent = ''; $('xMore').textContent = ''; xTot();
@@ -562,7 +562,7 @@ function xJKSync(){ const quick = $('xJK').value !== 'parts';
   document.querySelector('#xPay [data-v=Credit]').hidden = quick; if (quick && XPAY === 'Credit') { XPAY = ''; $('xFrom').value = ''; document.querySelectorAll('#xPay button').forEach(x => x.className = ''); } }
 $('xJK').onchange = xJKSync;
 /* more lines from the same supplier */
-let XCONF = {}; function confirm_(msg, k){ const key = k + '|' + msg; if (XCONF[key]) return true; XCONF = {}; XCONF[key] = 1; $('xMsg').className = 'msg err'; $('xMsg').textContent = msg; return false; }
+let XFORCE = 0; let XCONF = {}; function confirm_(msg, k){ const key = k + '|' + msg; if (XCONF[key]) return true; XCONF = {}; XCONF[key] = 1; $('xMsg').className = 'msg err'; $('xMsg').textContent = msg; return false; }
 function xLines(){ const out = [{ item: $('xItem').value.trim(), qty: $('xQty').value, cost: $('xCost').value.trim(), cat: $('xCat').value, estId: $('xItem').dataset.estId || '' }];
   document.querySelectorAll('#xMore .xl').forEach(r => out.push({ item: r.querySelector('.li').value.trim(), qty: r.querySelector('.lq').value, cost: r.querySelector('.lc').value.trim(), cat: r.querySelector('.lt').value, estId: r.dataset.estId || '' }));
   return out.filter((l, i) => i === 0 || l.item || l.cost); }
@@ -689,11 +689,11 @@ $('xSave').onclick = async () => {
   $('xSave').disabled = true; m.className = 'msg'; m.textContent = 'بيحفظ…';
   try {
     if (sup === '__new') { XSUPS = await ops('supplierAdd', {name: $('xNsName').value.trim(), phone: $('xNsPhone').value, type: 'قطع غيار'}); sup = $('xNsName').value.trim(); }
-    const common = {jobNo: XCUR.jobNo, pay: XPAY, from: $('xFrom').value, supplier: sup, note: $('xNote').value.trim(), receipt: XREC, noReceipt: XREC ? '' : $('xNoRec').value.trim()};
+    const common = {jobNo: XCUR.jobNo, pay: XPAY, from: $('xFrom').value, supplier: sup, note: $('xNote').value.trim(), receipt: XREC, noReceipt: XREC ? '' : $('xNoRec').value.trim(), force: XFORCE ? 1 : ''};
     if (lines.length > 1) await ops('addExpenses', Object.assign({lines}, common));
     else await ops('addExpense', Object.assign({item, cat: $('xCat').value, cost, qty: $('xQty').value, estId: $('xItem').dataset.estId || ''}, common));
-    const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل' + (lines.length > 1 ? ' ' + lines.length + ' بنود' : ' المصروف') + ' على ' + no + ' ونزل على Asana';
-  } catch(e) { err(clean(e.message)); }
+    XFORCE = 0; const no = XCUR.jobNo; await xLoad(); $('xListMsg').className = 'msg ok'; $('xListMsg').textContent = '✓ اتسجل' + (lines.length > 1 ? ' ' + lines.length + ' بنود' : ' المصروف') + ' على ' + no + ' ونزل على Asana';
+  } catch(e) { const t = clean(e.message); if (/تكرار:/.test(t) && !XFORCE) { XFORCE = 1; err(t + ' — لو ده بند تاني فعلاً دوس «حفظ» تاني'); } else err(t); }
   $('xSave').disabled = false;
 };
 
