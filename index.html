@@ -281,6 +281,7 @@ li:last-child{border-bottom:0}
       <button class="btn" id="npSave">تغيير</button>
       <div class="msg" id="npMsg"></div>
     </div>
+    <div class="card" id="manCard" hidden></div>
     <div class="card" id="tgCard" hidden>
       <h2>🔔 إشعارات الموبايل</h2>
       <div id="pushBody" class="muted">…</div>
@@ -289,7 +290,7 @@ li:last-child{border-bottom:0}
       <div id="tgBody" class="muted">…</div>
       <div class="msg" id="tgMsg"></div>
     </div>
-    <div class="top" style="justify-content:center;gap:18px;flex-wrap:wrap"><button class="link" id="tgOpen">🔔 التنبيهات</button><button class="link" id="pinOpen">🔑 غيّر الرقم السري</button><button class="link" id="logout">مش إنت؟ خروج</button></div>
+    <div class="top" style="justify-content:center;gap:18px;flex-wrap:wrap"><button class="link" id="manOpen">📖 إزاي أشتغل</button><button class="link" id="tgOpen">🔔 التنبيهات</button><button class="link" id="pinOpen">🔑 غيّر الرقم السري</button><button class="link" id="logout">مش إنت؟ خروج</button></div>
   </section>
 </div>
 
@@ -365,6 +366,14 @@ $('loginBtn').onclick = async () => {
   PIN = p; savePin(p); await load(); $('loginBtn').disabled = false;
 };
 // 📲 link this person's Telegram once: open the bot, press Start, come back and tap «خلصت»
+// the manual (same text as the office pages — it comes from the Operations system, so it is always the current one)
+$('manOpen').onclick = async () => { const c = $('manCard'); c.hidden = !c.hidden; if (c.hidden) return; c.textContent = 'بيحمّل…';
+  try { const M = await ops('manual'); c.textContent = ''; const r = M.roles[0];
+    c.append(el('h2', '📖 إزاي أشتغل'), el('div', 'آخر تحديث ' + M.updated, 'muted'));
+    if (M.changes.length) { const n = el('div'); n.style.cssText = 'border:1px solid var(--gold,#B8902F);border-radius:10px;padding:10px'; n.append(el('b', '🆕 الجديد')); M.changes.slice(0, 6).forEach(x => n.append(el('div', '• ' + x.text))); c.append(n); }
+    r.sections.forEach(sc => { const b = el('div'); b.append(el('h3', sc.t)); sc.s.forEach(l => { const d = el('div', l.trim()); d.style.cssText = 'line-height:1.7;margin-top:4px' + (/^  /.test(l) ? ';padding-inline-start:16px;font-size:.92em' : ''); b.append(d); }); c.append(b); });
+    c.append(cbtn('قفل', 'ghost', () => { c.hidden = true; }));
+    c.scrollIntoView({ behavior: 'smooth' }); } catch (e) { c.textContent = clean(e.message); } };
 $('tgOpen').onclick = () => { const c = $('tgCard'); c.hidden = !c.hidden; if (!c.hidden) { tgShow(); pushShow(); } };
 // a card on top until this phone gets notifications (hide it for today with «بعدين»)
 function pushNag() {
